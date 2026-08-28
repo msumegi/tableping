@@ -1,61 +1,97 @@
 import type { Card } from "../types";
+import { LOCAL_CARDS } from "./localCatalog";
 
-const TCGDEX = "https://api.tcgdex.net/v2/en";
+const POKEMON_TCG = "https://api.pokemontcg.io/v2";
+const SEARCH_TIMEOUT_MS = 8000;
 
-type TcgdexListCard = {
-  id: string;
-  name: string;
-  image?: string;
-  localId?: string;
-};
+/** Shown when the live catalog is down and the name is not in the local list. */
+export const SEARCH_UNAVAILABLE =
+  "Can't reach the card catalog right now. Try a well-known name like Pikachu, or check your connection.";
 
-type TcgdexDetail = TcgdexListCard & {
+type PtcgCard = {
+  id?: string;
+  name?: string;
+  number?: string;
   set?: { name?: string; id?: string };
-  localId?: string;
+  images?: { small?: string; large?: string };
 };
 
-export function cardImageUrl(imageBase: string, size: "low" | "high" = "low"): string {
-  if (!imageBase) return "";
-  if (imageBase.endsWith(".png") || imageBase.endsWith(".webp") || imageBase.endsWith(".jpg")) {
-    return imageBase;
-  }
-  return `${imageBase}/${size}.webp`;
-}
-
-function toCard(raw: TcgdexListCard, setName = ""): Card | null {
-  if (!raw.id || !raw.name || !raw.image) return null;
+function fromPtcg(raw: PtcgCard): Card | null {
+  const image = raw.images?.small || raw.images?.large || "";
+  if (!raw.id || !raw.name || !image) return null;
   return {
     id: raw.id,
     name: raw.name,
-    image: cardImageUrl(raw.image, "low"),
-    setName: setName || raw.id.split("-")[0] || "",
-    number: String(raw.localId ?? ""),
+    image,
+    setName: raw.set?.name || "",
+    number: String(raw.number ?? ""),
   };
+}
+
+function luceneNameQuery(raw: string): string {
+  const cleaned = raw.replace(/[:"*?\\()[\]{}]/g, " ").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "name:*";
+  if (cleaned.includes(" ")) return `name:"${cleaned}*"`;
+  return `name:${cleaned}*`;
+}
+
+async function fetchWithTimeout(url: string, timeoutMs = SEARCH_TIMEOUT_MS): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function dedupeCards(cards: Card[]): Card[] {
+  const seen = new Set<string>();
+  const out: Card[] = [];
+  for (const card of cards) {
+    if (seen.has(card.id)) continue;
+    seen.add(card.id);
+    out.push(card);
+  }
+  return out;
+}
+
+export function searchLocalCatalog(query: string): Card[] {
+  const q = query.trim().toLowerCase();
+  if (q.length < 2) return [];
+  const hits = LOCAL_CARDS.filter((card) => card.name.toLowerCase().includes(q));
+  return rankSearchResults(query, dedupeCards(hits)).slice(0, 36);
+}
+
+async function searchPokemonTcgApi(query: string): Promise<Card[]> {
+  const params = new URLSearchParams({
+    q: luceneNameQuery(query),
+    pageSize: "40",
+  });
+  const res = await fetchWithTimeout(`${POKEMON_TCG}/cards?${params}`);
+  if (!res.ok) {
+    throw new Error(`Card search failed (${res.status})`);
+  }
+  const body = (await res.json()) as { data?: PtcgCard[] };
+  if (!Array.isArray(body?.data)) {
+    throw new Error("Card search returned an unexpected response");
+  }
+  return dedupeCards(body.data.map(fromPtcg).filter((card): card is Card => card !== null));
 }
 
 export async function searchCards(query: string): Promise<Card[]> {
   const q = query.trim();
   if (q.length < 2) return [];
 
-  const url = `${TCGDEX}/cards?name=${encodeURIComponent(q)}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Card search failed (${res.status})`);
+  try {
+    const remote = await searchPokemonTcgApi(q);
+    if (remote.length) return rankSearchResults(q, remote).slice(0, 36);
+    return searchLocalCatalog(q);
+  } catch {
+    const local = searchLocalCatalog(q);
+    if (local.length) return local;
+    throw new Error(SEARCH_UNAVAILABLE);
   }
-  const data = (await res.json()) as TcgdexListCard[] | { error?: string };
-  if (!Array.isArray(data)) {
-    throw new Error("Card search returned an unexpected response");
-  }
-
-  const seen = new Set<string>();
-  const cards: Card[] = [];
-  for (const raw of data) {
-    const card = toCard(raw);
-    if (!card || seen.has(card.id)) continue;
-    seen.add(card.id);
-    cards.push(card);
-  }
-  return rankSearchResults(q, cards).slice(0, 36);
 }
 
 export function rankSearchResults(query: string, cards: Card[]): Card[] {
@@ -76,38 +112,35 @@ export function rankSearchResults(query: string, cards: Card[]): Card[] {
 }
 
 export async function hydrateSetName(card: Card): Promise<Card> {
-  if (card.setName && card.setName.length > 4) return card;
+  if (card.setName) return card;
   try {
-    const res = await fetch(`${TCGDEX}/cards/${encodeURIComponent(card.id)}`);
+    const res = await fetchWithTimeout(`${POKEMON_TCG}/cards/${encodeURIComponent(card.id)}`, 5000);
     if (!res.ok) return card;
-    const detail = (await res.json()) as TcgdexDetail;
+    const body = (await res.json()) as { data?: PtcgCard };
+    const raw = body.data;
+    if (!raw) return card;
+    const mapped = fromPtcg(raw);
+    if (!mapped) return card;
     return {
       ...card,
-      setName: detail.set?.name || card.setName,
-      number: String(detail.localId ?? card.number),
-      image: detail.image ? cardImageUrl(detail.image, "low") : card.image,
+      setName: mapped.setName || card.setName,
+      number: mapped.number || card.number,
+      image: mapped.image || card.image,
     };
   } catch {
     return card;
   }
 }
 
-/** Starter printings used by demo mode when lists are empty. */
-export const SAMPLE_PIKACHU: Card = {
-  id: "base1-58",
-  name: "Pikachu",
-  image: cardImageUrl("https://assets.tcgdex.net/en/base/base1/58"),
-  setName: "Base Set",
-  number: "58",
-};
+function mustLocal(id: string): Card {
+  const card = LOCAL_CARDS.find((c) => c.id === id);
+  if (!card) throw new Error(`Missing local card ${id}`);
+  return card;
+}
 
-export const SAMPLE_CHARIZARD: Card = {
-  id: "base1-4",
-  name: "Charizard",
-  image: cardImageUrl("https://assets.tcgdex.net/en/base/base1/4"),
-  setName: "Base Set",
-  number: "4",
-};
+/** Starter printings used by demo mode when lists are empty. */
+export const SAMPLE_PIKACHU: Card = mustLocal("base1-58");
+export const SAMPLE_CHARIZARD: Card = mustLocal("base1-4");
 
 export const QUICK_SEARCHES = [
   "Pikachu",

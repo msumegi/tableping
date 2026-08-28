@@ -12,7 +12,7 @@ import {
   saveWant,
   upsertCard,
 } from "./lib/storage";
-import { QUICK_SEARCHES, hydrateSetName, searchCards } from "./lib/cards";
+import { QUICK_SEARCHES, SEARCH_UNAVAILABLE, hydrateSetName, searchCards } from "./lib/cards";
 import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
 import { encodeGeohash, haversineMeters, MAX_MATCH_METERS } from "./lib/geo";
 import { kindLabel, matchAgainst } from "./lib/match";
@@ -570,8 +570,8 @@ function AddCardSheet({
       const found = await searchCards(term);
       setResults(found);
       if (!found.length) setErr("No cards with art for that name. Try a Pokémon name.");
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Search failed");
+    } catch {
+      setErr(SEARCH_UNAVAILABLE);
     } finally {
       setBusy(false);
     }
@@ -589,7 +589,7 @@ function AddCardSheet({
       <div className="sheet fullish" onClick={(e) => e.stopPropagation()}>
         <div className="grab" />
         <h2 className="panel-title">Add to {target === "have" ? "Have" : "Want"}</h2>
-        <p className="lede">Search the Pokémon TCG (TCGdex). Pick the exact printing.</p>
+        <p className="lede">Search Pokémon cards. Pick the exact printing.</p>
         <input
           className="field"
           placeholder="Pikachu, Charizard, Umbreon…"
