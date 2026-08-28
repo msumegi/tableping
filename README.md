@@ -114,7 +114,7 @@ npm run preview
 | Piece | Choice | Why |
 | --- | --- | --- |
 | App | React + Vite **PWA** | Installable from Chrome on Android without the Play Store or Expo build machines |
-| Cards | [TCGdex](https://tcgdex.dev) (Pokémon TCG, no key, CORS enabled) | Search-to-add from the phone; no secrets in the repo |
+| Cards | [Pokémon TCG API](https://docs.pokemontcg.io) (no key, CORS enabled) plus a local list of popular names | Search-to-add from the phone; no secrets in the repo |
 | Lists | `localStorage` on the device | No account |
 | Demo ping | Local complementary trainer named Kai | One tester can see a ping |
 | Same-table QR | QR encodes have/want | Works in a shop even when GPS is junk |
@@ -128,7 +128,7 @@ Live nearby uses HiveMQ’s **public** MQTT broker as a v1 convenience so there 
 
 - Do not put API keys in this repo. v1 does not need any.
 - Optional later: a Pokémon TCG API key would belong in an environment variable, never in git.
-- Card images load from `assets.tcgdex.net`.
+- Card images load from `images.pokemontcg.io`. If the live catalog is down, search still returns a local set of well-known cards instead of a browser fetch error.
 
 ---
 

@@ -16,19 +16,27 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,svg,png,webp,woff2}"],
         runtimeCaching: [
           {
+            urlPattern: /^https:\/\/images\.pokemontcg\.io\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "pokemontcg-images",
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/api\.pokemontcg\.io\/.*/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "pokemontcg-api",
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
+            },
+          },
+          {
             urlPattern: /^https:\/\/assets\.tcgdex\.net\/.*/i,
             handler: "CacheFirst",
             options: {
               cacheName: "tcgdex-images",
               expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/api\.tcgdex\.net\/.*/i,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "tcgdex-api",
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
             },
           },
         ],
