@@ -54,9 +54,25 @@ export async function searchCards(query: string): Promise<Card[]> {
     if (!card || seen.has(card.id)) continue;
     seen.add(card.id);
     cards.push(card);
-    if (cards.length >= 36) break;
   }
-  return cards;
+  return rankSearchResults(q, cards).slice(0, 36);
+}
+
+export function rankSearchResults(query: string, cards: Card[]): Card[] {
+  const q = query.trim().toLowerCase();
+  const score = (name: string) => {
+    const n = name.toLowerCase();
+    if (n === q) return 0;
+    if (n.startsWith(q + " ")) return 1;
+    if (n.startsWith(q)) return 2;
+    if (n.includes(q)) return 3;
+    return 4;
+  };
+  return [...cards].sort((a, b) => {
+    const d = score(a.name) - score(b.name);
+    if (d !== 0) return d;
+    return a.id.localeCompare(b.id);
+  });
 }
 
 export async function hydrateSetName(card: Card): Promise<Card> {
