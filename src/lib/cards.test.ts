@@ -3,6 +3,7 @@ import {
   QUICK_SEARCHES,
   SEARCH_UNAVAILABLE,
   findCardsFromScan,
+  parseCatalogQuery,
   rankSearchResults,
   searchCards,
   searchLocalCatalog,
@@ -35,6 +36,30 @@ describe("search ranking", () => {
       "Pikachu on the Ball",
       "Flying Pikachu V",
     ]);
+  });
+
+  it("puts the matching set first when the query includes a set name", () => {
+    const ranked = rankSearchResults("umbreon evolving skies", [
+      { id: "neo2-13", name: "Umbreon", image: "x", setName: "Neo Discovery", number: "13" },
+      { id: "swsh7-95", name: "Umbreon VMAX", image: "x", setName: "Evolving Skies", number: "95" },
+      { id: "hgss3-10", name: "Umbreon", image: "x", setName: "HS—Undaunted", number: "10" },
+    ]);
+    expect(ranked[0].id).toBe("swsh7-95");
+    expect(ranked[0].setName).toBe("Evolving Skies");
+  });
+});
+
+describe("parseCatalogQuery", () => {
+  it("splits a Pokémon name from a following set phrase", () => {
+    expect(parseCatalogQuery("umbreon evolving skies")).toEqual({
+      name: "umbreon",
+      set: "evolving skies",
+    });
+    expect(parseCatalogQuery("Charizard VMAX Evolving Skies")).toEqual({
+      name: "Charizard VMAX",
+      set: "Evolving Skies",
+    });
+    expect(parseCatalogQuery("Pikachu")).toEqual({ name: "Pikachu" });
   });
 });
 
@@ -86,6 +111,41 @@ describe("searchCards", () => {
         number: "58",
       },
     ]);
+  });
+
+  it("queries name and set when the typed text includes a set", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        data: [
+          {
+            id: "swsh7-95",
+            name: "Umbreon VMAX",
+            number: "95",
+            set: { name: "Evolving Skies" },
+            images: { small: "https://images.pokemontcg.io/swsh7/95.png" },
+          },
+          {
+            id: "neo2-13",
+            name: "Umbreon",
+            number: "13",
+            set: { name: "Neo Discovery" },
+            images: { small: "https://images.pokemontcg.io/neo2/13.png" },
+          },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const cards = await searchCards("umbreon evolving skies");
+    const called = JSON.stringify(fetchMock.mock.calls);
+    expect(called).toContain("api.pokemontcg.io/v2/cards");
+    expect(called).toContain("set.name");
+    expect(cards[0]).toMatchObject({
+      id: "swsh7-95",
+      name: "Umbreon VMAX",
+      setName: "Evolving Skies",
+    });
+    expect(cards.every((c) => c.setName.toLowerCase().includes("evolving"))).toBe(true);
   });
 
   it("falls back to the local catalog when the API network-fails", async () => {
@@ -170,5 +230,18 @@ describe("local catalog", () => {
         `${name} exact printing`,
       ).toBe(true);
     }
+  });
+
+  it("matches a set name in the query, not only the Pokémon name", () => {
+    const hits = searchLocalCatalog("umbreon evolving skies");
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits[0].setName.toLowerCase()).toContain("evolving skies");
+    expect(hits[0].name.toLowerCase()).toContain("umbreon");
+  });
+
+  it("includes Charizard and Pikachu in the quick chips", () => {
+    expect(QUICK_SEARCHES).toContain("Charizard");
+    expect(QUICK_SEARCHES).toContain("Pikachu");
+    expect(QUICK_SEARCHES.slice(0, 2).sort()).toEqual(["Charizard", "Pikachu"]);
   });
 });

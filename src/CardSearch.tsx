@@ -6,7 +6,7 @@ export function CardSearchPanel({
   onPick,
   showChips = true,
   autoFocus = false,
-  placeholder = "Pikachu, Charizard, Umbreon…",
+  placeholder = "Umbreon Evolving Skies, Pikachu…",
 }: {
   onPick: (card: Card) => void;
   showChips?: boolean;
@@ -24,7 +24,7 @@ export function CardSearchPanel({
     try {
       const found = await searchCards(term);
       setResults(found);
-      if (!found.length) setErr("No cards with art for that name. Try a Pokémon name.");
+      if (!found.length) setErr("No cards for that. Try a name, or a name and set.");
     } catch {
       setErr(SEARCH_UNAVAILABLE);
     } finally {
@@ -47,7 +47,7 @@ export function CardSearchPanel({
         value={q}
         autoFocus={autoFocus}
         onChange={(e) => setQ(e.target.value)}
-        aria-label="Search Pokémon cards"
+        aria-label="Search Pokémon cards by name or set"
       />
       {showChips ? (
         <div className="chips">

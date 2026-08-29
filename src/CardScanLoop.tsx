@@ -155,7 +155,9 @@ export function CardScanLoop({
       {showCamera ? (
         <div className={`scan-video-wrap${state.phase === "confirm" || state.phase === "pick" || state.typeaheadOpen ? " compact" : ""}`}>
           <video ref={videoRef} playsInline muted autoPlay />
-          <div ref={frameRef} className="scan-frame" aria-hidden />
+          <div ref={frameRef} className="scan-frame" aria-hidden>
+            <span className="scan-frame-label">Fit one card</span>
+          </div>
         </div>
       ) : null}
       <p className={state.phase === "denied" || state.phase === "ocrfail" ? "status error" : "hint"}>
@@ -210,9 +212,9 @@ export function CardScanLoop({
       {state.typeaheadOpen || state.phase === "denied" || state.phase === "ocrfail" ? (
         <CardSearchPanel
           onPick={(card) => void addCard(card)}
-          showChips={false}
+          showChips
           autoFocus={state.phase === "denied" || state.phase === "ocrfail"}
-          placeholder="Type the Pokémon name"
+          placeholder="Umbreon Evolving Skies, Pikachu…"
         />
       ) : null}
 
