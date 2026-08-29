@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   QUICK_SEARCHES,
   SEARCH_UNAVAILABLE,
+  findCardsFromScan,
   rankSearchResults,
   searchCards,
   searchLocalCatalog,
@@ -107,6 +108,43 @@ describe("searchCards", () => {
     vi.stubGlobal("fetch", vi.fn(async () => jsonResponse({ error: "boom" }, 500)));
     const cards = await searchCards("Charizard");
     expect(cards.some((c) => c.name === "Charizard")).toBe(true);
+  });
+
+  it("findCardsFromScan ranks a number hit first and falls back locally", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("number:")) {
+        return jsonResponse({
+          data: [
+            {
+              id: "base1-58",
+              name: "Pikachu",
+              number: "58",
+              set: { name: "Base" },
+              images: { small: "https://images.pokemontcg.io/base1/58.png" },
+            },
+          ],
+        });
+      }
+      throw new TypeError("Failed to fetch");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const cards = await findCardsFromScan("Pikachu", "58");
+    expect(JSON.stringify(fetchMock.mock.calls)).toContain("number");
+    expect(cards[0]).toMatchObject({ id: "base1-58", name: "Pikachu", number: "58" });
+  });
+
+  it("findCardsFromScan uses the local catalog when the API is down", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("Failed to fetch");
+      }),
+    );
+    const cards = await findCardsFromScan("Charizard", "4");
+    expect(cards[0].name).toBe("Charizard");
+    expect(cards[0].number).toBe("4");
   });
 
   it("never surfaces the browser Failed to fetch text when API and local miss", async () => {

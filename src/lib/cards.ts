@@ -1,5 +1,6 @@
 import type { Card } from "../types";
 import { LOCAL_CARDS } from "./localCatalog";
+import { rankByCollectorNumber } from "./scanMatch";
 
 const POKEMON_TCG = "https://api.pokemontcg.io/v2";
 const SEARCH_TIMEOUT_MS = 8000;
@@ -63,9 +64,9 @@ export function searchLocalCatalog(query: string): Card[] {
   return rankSearchResults(query, dedupeCards(hits)).slice(0, 36);
 }
 
-async function searchPokemonTcgApi(query: string): Promise<Card[]> {
+async function searchPokemonTcgLucene(lucene: string): Promise<Card[]> {
   const params = new URLSearchParams({
-    q: luceneNameQuery(query),
+    q: lucene,
     pageSize: "40",
   });
   const res = await fetchWithTimeout(`${POKEMON_TCG}/cards?${params}`);
@@ -77,6 +78,35 @@ async function searchPokemonTcgApi(query: string): Promise<Card[]> {
     throw new Error("Card search returned an unexpected response");
   }
   return dedupeCards(body.data.map(fromPtcg).filter((card): card is Card => card !== null));
+}
+
+async function searchPokemonTcgApi(query: string): Promise<Card[]> {
+  return searchPokemonTcgLucene(luceneNameQuery(query));
+}
+
+/** Match a camera read to printings. Number is used when OCR saw 58/102 (etc). */
+export async function findCardsFromScan(name: string, number?: string): Promise<Card[]> {
+  const q = name.trim();
+  if (q.length < 2) return [];
+
+  try {
+    if (number) {
+      const num = /^\d+$/.test(number.trim()) ? String(parseInt(number.trim(), 10)) : number.trim();
+      try {
+        const precise = await searchPokemonTcgLucene(`${luceneNameQuery(q)} number:${num}`);
+        if (precise.length) return rankByCollectorNumber(rankSearchResults(q, precise), number).slice(0, 12);
+      } catch {
+        /* name-only next */
+      }
+    }
+    const byName = await searchPokemonTcgApi(q);
+    if (byName.length) return rankByCollectorNumber(rankSearchResults(q, byName), number).slice(0, 12);
+    return rankByCollectorNumber(searchLocalCatalog(q), number).slice(0, 12);
+  } catch {
+    const local = searchLocalCatalog(q);
+    if (local.length) return rankByCollectorNumber(local, number).slice(0, 12);
+    throw new Error(SEARCH_UNAVAILABLE);
+  }
 }
 
 export async function searchCards(query: string): Promise<Card[]> {
