@@ -521,6 +521,96 @@ img {
   object-fit: cover;
 }
 
+.scan-loop {
+  display: grid;
+  gap: 8px;
+}
+
+.scan-video-wrap {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #000;
+}
+
+.scan-video-wrap video {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  display: block;
+}
+
+.scan-video-wrap.compact video {
+  aspect-ratio: 3 / 2;
+  max-height: 220px;
+}
+
+.scan-frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 62%;
+  aspect-ratio: 63 / 88;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(245, 215, 110, 0.9);
+  border-radius: 12px;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.38);
+  pointer-events: none;
+}
+
+.scan-frame-label {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--electric);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+}
+
+.scan-confirm {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 12px;
+  align-items: center;
+  background: #2a231c;
+  border: 1px solid rgba(243, 234, 216, 0.08);
+  border-radius: 14px;
+  padding: 10px;
+}
+
+.scan-confirm img {
+  width: 78px;
+  aspect-ratio: 63 / 88;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.scan-confirm .name {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.scan-confirm .meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.scan-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.scan-actions {
+  flex-wrap: wrap;
+}
+
 .badge {
   font-size: 0.68rem;
   font-weight: 700;

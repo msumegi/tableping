@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Card, MatchSource, Presence, Settings, Tab, TradeMatch } from "./types";
+import { AddCardSheet } from "./AddCardSheet";
 import {
   loadHave,
   loadSeenMatchIds,
@@ -12,7 +13,6 @@ import {
   saveWant,
   upsertCard,
 } from "./lib/storage";
-import { QUICK_SEARCHES, SEARCH_UNAVAILABLE, hydrateSetName, searchCards } from "./lib/cards";
 import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
 import { encodeGeohash, haversineMeters, MAX_MATCH_METERS } from "./lib/geo";
 import { kindLabel, matchAgainst } from "./lib/match";
@@ -64,10 +64,10 @@ export default function App() {
     setSettings(next);
   }
 
-  function addCard(list: "have" | "want", card: Card) {
+  function addCard(list: "have" | "want", card: Card, keepSheet = false) {
     if (list === "have") setHave((prev) => upsertCard(prev, card));
     else setWant((prev) => upsertCard(prev, card));
-    setAddingFor(null);
+    if (!keepSheet) setAddingFor(null);
     setTab(list);
   }
 
@@ -294,8 +294,10 @@ export default function App() {
       {addingFor && (
         <AddCardSheet
           target={addingFor}
+          existingIds={new Set((addingFor === "have" ? have : want).map((c) => c.id))}
           onClose={() => setAddingFor(null)}
           onPick={(card) => addCard(addingFor, card)}
+          onPickKeepOpen={(card) => addCard(addingFor, card, true)}
         />
       )}
       {activePing && (
@@ -536,9 +538,9 @@ function YouPane({
       </div>
       <h3 className="panel-title">What v1 is</h3>
       <p className="lede">
-        Pokémon TCG only. Have/want lists. Search-to-add (camera card scan is too fragile for v1).
-        In-the-room pings when someone nearby has what you want, wants what you have, or both. No
-        meetup scheduler. No Magic. No One Piece. No city-wide radius.
+        Pokémon TCG only. Have/want lists. Type a name or scan one card at a time. In-the-room pings
+        when someone nearby has what you want, wants what you have, or both. No meetup scheduler. No
+        Magic. No One Piece. No city-wide radius.
       </p>
       <h3 className="panel-title">Install on Android</h3>
       <p className="lede">
@@ -546,97 +548,6 @@ function YouPane({
         then opens like a phone app.
       </p>
     </section>
-  );
-}
-
-function AddCardSheet({
-  target,
-  onClose,
-  onPick,
-}: {
-  target: "have" | "want";
-  onClose: () => void;
-  onPick: (card: Card) => void;
-}) {
-  const [q, setQ] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const [results, setResults] = useState<Card[]>([]);
-
-  async function run(term: string) {
-    setErr("");
-    setBusy(true);
-    try {
-      const found = await searchCards(term);
-      setResults(found);
-      if (!found.length) setErr("No cards with art for that name. Try a Pokémon name.");
-    } catch {
-      setErr(SEARCH_UNAVAILABLE);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  useEffect(() => {
-    const t = window.setTimeout(() => {
-      if (q.trim().length >= 2) void run(q);
-    }, 280);
-    return () => window.clearTimeout(t);
-  }, [q]);
-
-  return (
-    <div className="search-sheet" onClick={onClose}>
-      <div className="sheet fullish" onClick={(e) => e.stopPropagation()}>
-        <div className="grab" />
-        <h2 className="panel-title">Add to {target === "have" ? "Have" : "Want"}</h2>
-        <p className="lede">Search Pokémon cards. Pick the exact printing.</p>
-        <input
-          className="field"
-          placeholder="Pikachu, Charizard, Umbreon…"
-          value={q}
-          autoFocus
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <div className="chips">
-          {QUICK_SEARCHES.map((name) => (
-            <button
-              key={name}
-              className="chip"
-              onClick={() => {
-                setQ(name);
-                void run(name);
-              }}
-            >
-              {name}
-            </button>
-          ))}
-        </div>
-        {busy ? <p className="status">Searching…</p> : null}
-        {err ? <p className="status error">{err}</p> : null}
-        <div className="card-grid">
-          {results.map((card) => (
-            <button
-              key={card.id}
-              className="card-tile"
-              onClick={async () => onPick(await hydrateSetName(card))}
-            >
-              <img src={card.image} alt={card.name} />
-              <figcaption>
-                <div className="name">{card.name}</div>
-                <div className="meta">
-                  {card.setName} {card.number && `· ${card.number}`}
-                </div>
-              </figcaption>
-            </button>
-          ))}
-        </div>
-        <div className="sheet-actions">
-          <button className="btn secondary full" onClick={onClose}>
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 

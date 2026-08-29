@@ -45,14 +45,18 @@ If that link 404s, turn on GitHub Pages once (takes about a minute):
 ### 3. Tap through the first session
 
 1. Open **You** and set your display name
-2. Open **Have** → **Add a Pokémon card** → search `Pikachu` → tap a printing
-3. Open **Want** → search `Charizard` → tap a printing
+2. Open **Have** → **Add a Pokémon card** → scan a card or search `Pikachu` → confirm a printing
+3. Open **Want** → scan or search `Charizard` → confirm a printing
 4. Open **Nearby** → tap **Try a demo ping**
 5. You should see a full-screen ping that **Kai (demo)** is at your table, with a card you can give and a card you can get
 
-That’s the whole v1 loop: lists, add a card, nearby/demo ping.
+That’s the whole v1 loop: lists, add a card (type or scan), nearby/demo ping.
 
-Camera **card** scanning is not in v1 (too fragile). Search-to-add is the way to add cards. Camera **is** used to scan another TablePing user’s table QR, which is reliable.
+**Scan a stack of cards:** Have or Want → **Add a Pokémon card** → **Scan cards**. The camera stays open. Point at **one** card, confirm the match, flip to the next. Tap **Done** when you are finished. If the read is unsure, pick from a short list or type the name without leaving the loop. If the camera is blocked, TablePing says so and search still works.
+
+Binder-page photos are not in this version (sleeves and glare make a whole page unreliable). Search-to-add is still there: typing `pik` still shows Pikachu, and `umbreon evolving skies` matches the set too.
+
+Camera is also used to scan another TablePing user’s table QR.
 
 ---
 
@@ -114,7 +118,8 @@ npm run preview
 | Piece | Choice | Why |
 | --- | --- | --- |
 | App | React + Vite **PWA** | Installable from Chrome on Android without the Play Store or Expo build machines |
-| Cards | [Pokémon TCG API](https://docs.pokemontcg.io) (no key, CORS enabled) plus a local list of popular names | Search-to-add from the phone; no secrets in the repo |
+| Cards | [Pokémon TCG API](https://docs.pokemontcg.io) (no key, CORS enabled) plus a local list of popular names | Type a name or a name+set (`umbreon evolving skies`); no secrets in the repo |
+| Card scan | One-card camera loop + on-device OCR, then the same catalog search | Log 20–200 cards without retyping names; confirm before add |
 | Lists | `localStorage` on the device | No account |
 | Demo ping | Local complementary trainer named Kai | One tester can see a ping |
 | Same-table QR | QR encodes have/want | Works in a shop even when GPS is junk |

@@ -39,10 +39,29 @@ export default defineConfig({
               expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },
           },
+          {
+            urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/tesseract.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "tesseract-cdn",
+              expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/tessdata\.projectnaptha\.com\/.*/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "tesseract-lang",
+              expiration: { maxEntries: 6, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
         ],
       },
     }),
   ],
+  optimizeDeps: {
+    exclude: ["tesseract.js"],
+  },
   server: {
     port: 5173,
     host: true,
