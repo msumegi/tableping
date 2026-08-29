@@ -18,8 +18,9 @@ describe("marketing landing page is a static public file", () => {
   });
 
   it("names the product, studio, lead, live app, and unofficial status", () => {
-    expect(html).toContain("TablePing");
+    expect(html).toContain("TableTrade");
     expect(html).toContain("Trade here, now.");
+    expect(html).not.toMatch(/TablePing/);
     expect(html).not.toMatch(/NowTrade/);
     expect(html).not.toMatch(/tonight/i);
     expect(html).toContain("Central Alberta Technologies");
@@ -28,7 +29,7 @@ describe("marketing landing page is a static public file", () => {
     expect(html).toContain("https://msumegi.github.io/tableping/");
     expect(html).toMatch(/unofficial/i);
     expect(html).toMatch(/Nintendo|Pokémon Company|Pokemon Company/);
-    expect(html).toContain("Open TablePing");
+    expect(html).toContain("Open TableTrade");
     expect(html).not.toMatch(/Play Store|Google Play/i);
   });
 

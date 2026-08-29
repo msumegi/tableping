@@ -14,7 +14,7 @@ Pokémon only. No Magic. No One Piece.
 
 Built for **Matthew** to try on an Android phone.
 
-Share the product: **[tableping/welcome](https://msumegi.github.io/tableping/welcome/)** — *Trade here, now.* Static marketing page. The live PWA stays at the site root.
+Share **TableTrade**: **[tableping/welcome](https://msumegi.github.io/tableping/welcome/)** — *Trade here, now.* Static marketing page. The live app stays at the site root (`/tableping/`).
 
 ---
 
@@ -28,7 +28,7 @@ After this repo is on GitHub and Pages is on, open:
 
 **https://msumegi.github.io/tableping/**
 
-Marketing / landing page (share this with shops and friends):
+**TableTrade** marketing / landing page (share this with shops and friends):
 
 **https://msumegi.github.io/tableping/welcome/**
 
