@@ -14,7 +14,7 @@ Pokémon only. No Magic. No One Piece.
 
 Built for **Matthew** to try on an Android phone.
 
-Share the product: **[tableping/welcome](https://msumegi.github.io/tableping/welcome/)** — a static marketing page. The live PWA stays at the site root.
+Share the product: **[tableping/welcome](https://msumegi.github.io/tableping/welcome/)** — *Trade here, now.* Static marketing page. The live PWA stays at the site root.
 
 ---
 

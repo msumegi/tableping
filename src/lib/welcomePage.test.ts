@@ -19,6 +19,9 @@ describe("marketing landing page is a static public file", () => {
 
   it("names the product, studio, lead, live app, and unofficial status", () => {
     expect(html).toContain("TablePing");
+    expect(html).toContain("Trade here, now.");
+    expect(html).not.toMatch(/NowTrade/);
+    expect(html).not.toMatch(/tonight/i);
     expect(html).toContain("Central Alberta Technologies");
     expect(html).toContain("Lead Developer");
     expect(html).toContain("Matt Sumegi");
