@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const seed = join(root, "scripts/tabletrade-seed");
 const html = readFileSync(join(seed, "index.html"), "utf8");
+const about = readFileSync(join(seed, "about/index.html"), "utf8");
 const css = readFileSync(join(seed, "styles.css"), "utf8");
 const vite = readFileSync(join(root, "vite.config.ts"), "utf8");
 const readme = readFileSync(join(root, "README.md"), "utf8");
@@ -15,6 +16,7 @@ describe("marketing site is disconnected from the app Pages deploy", () => {
     expect(existsSync(join(root, "public/welcome"))).toBe(false);
     expect(readme).not.toMatch(/tableping\/welcome/);
     expect(html).not.toMatch(/\/welcome/);
+    expect(about).not.toMatch(/\/welcome/);
   });
 
   it("keeps /welcome/ out of the PWA navigation fallback so the old path 404s", () => {
@@ -47,5 +49,36 @@ describe("marketing site is disconnected from the app Pages deploy", () => {
     expect(html).toContain("Open TableTrade");
     expect(html).not.toMatch(/Play Store|Google Play/i);
     expect(readme).toContain("https://msumegi.github.io/tabletrade/");
+  });
+
+  it("is a small site with Home, About, nav, and a live-app CTA", () => {
+    expect(html).toContain('href="about/"');
+    expect(html).toContain('aria-current="page">Home');
+    expect(about).toContain('href="../"');
+    expect(about).toContain('aria-current="page">About');
+    expect(html).toContain("https://msumegi.github.io/tableping/");
+    expect(about).toContain("https://msumegi.github.io/tableping/");
+    expect(about).toMatch(/<h1>\s*Matt Sumegi\s*<\/h1>/);
+    expect(about).toContain("Lead Developer of TableTrade");
+    expect(about).toContain("Central Alberta Technologies");
+    expect(about).toContain("town councillor");
+    expect(about).toContain("Castor, Alberta");
+    expect(about).toContain("https://grokipedia.com/page/castor_alberta");
+    expect(about).toMatch(/>Grokipedia</);
+    expect(about).toContain('src="../media/matt-sumegi.jpg"');
+  });
+
+  it("leads with what TableTrade is, not what it is not", () => {
+    expect(html).not.toMatch(/Not a 25-mile marketplace/i);
+    expect(html).not.toMatch(/Not Magic/);
+    expect(html).not.toMatch(/Not One Piece/);
+    expect(html).not.toMatch(/Not a city-wide marketplace/i);
+    expect(html).not.toMatch(/no other TCGs/i);
+    expect(about).not.toMatch(/SLICE/i);
+    expect(html).toContain("have-list");
+    expect(html).toContain("want-list");
+    expect(html).toMatch(/scan or search/i);
+    expect(html).toMatch(/ping/i);
+    expect(html).toMatch(/Pokémon/);
   });
 });

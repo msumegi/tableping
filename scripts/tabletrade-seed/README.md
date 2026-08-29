@@ -4,7 +4,14 @@ Marketing site for **TableTrade** — *Trade here, now.*
 
 A product of **Central Alberta Technologies**. Lead Developer **Matt Sumegi**.
 
-This repo is the public marketing page only. It is **not** the web app.
+This repo is the public marketing site only. It is **not** the web app.
+
+| Page | Path |
+| --- | --- |
+| Home | `/` |
+| About | `/about/` |
+
+The About page uses `media/matt-sumegi.jpg` (Matt’s smiling headshot). Drop the real portrait there — do not generate a stand-in.
 
 | | URL |
 | --- | --- |

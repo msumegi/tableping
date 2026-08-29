@@ -26,6 +26,8 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html styles.css favicon.svg _site/
+          cp -a about _site/
+          if [ -d media ]; then cp -a media _site/; fi
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
