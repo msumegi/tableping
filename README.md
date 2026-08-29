@@ -1,8 +1,8 @@
-# TablePing
+# TableTrade
 
 Pokémon Trading Card Game have-lists, want-lists, and **in-the-room trade pings**.
 
-If you and someone else at the same card shop are both using TablePing, you get a ping when:
+If you and someone else at the same card shop are both using TableTrade, you get a ping when:
 
 - they want a card you have, or
 - they have a card you want, or
@@ -18,7 +18,7 @@ Built for **Matthew** to try on an Android phone.
 
 ## Try it on Android (no developer tools)
 
-TablePing is a small phone website you can install like an app (a PWA). Use **Chrome** on Android.
+TableTrade is a small phone website you can install like an app (a PWA). Use **Chrome** on Android. The repo and live URL still use `tableping`.
 
 ### 1. Open it
 
@@ -40,23 +40,23 @@ If that link 404s, turn on GitHub Pages once (takes about a minute):
 2. Tap the **three dots** (top right)
 3. Tap **Add to Home screen** or **Install app**
 4. Tap **Install** / **Add**
-5. Open **TablePing** from the home screen like any other app
+5. Open **TableTrade** from the home screen like any other app
 
 ### 3. Tap through the first session
 
 1. Open **You** and set your display name
 2. Open **Have** → **Add a Pokémon card** → scan a card or search `Pikachu` → confirm a printing
 3. Open **Want** → scan or search `Charizard` → confirm a printing
-4. Open **Nearby** → tap **Try a demo ping**
+4. Open **Nearby** → tap **See a demo ping now**
 5. You should see a full-screen ping that **Kai (demo)** is at your table, with a card you can give and a card you can get
 
 That’s the whole v1 loop: lists, add a card (type or scan), nearby/demo ping.
 
-**Scan a stack of cards:** Have or Want → **Add a Pokémon card** → **Scan cards**. The camera stays open. Point at **one** card, confirm the match, flip to the next. Tap **Done** when you are finished. If the read is unsure, pick from a short list or type the name without leaving the loop. If the camera is blocked, TablePing says so and search still works.
+**Scan a stack of cards:** Have or Want → **Add a Pokémon card** → **Scan cards**. The camera stays open. Point at **one** card, confirm the match, flip to the next. Tap **Done** when you are finished. If the read is unsure, pick from a short list or type the name without leaving the loop. If the camera is blocked, TableTrade says so and search still works.
 
 Binder-page photos are not in this version (sleeves and glare make a whole page unreliable). Search-to-add is still there: typing `pik` still shows Pikachu, and `umbreon evolving skies` matches the set too.
 
-Camera is also used to scan another TablePing user’s table QR.
+Camera is also used to scan another TableTrade user’s table QR.
 
 ---
 
@@ -73,9 +73,9 @@ Do this when you are actually standing at the same table. City-wide matching is 
 
 **Table code:** one person turns **Share a table code** on and reads the four characters. The other types it under **Join table code**.
 
-**Shop-scale GPS:** both turn **I’m at the shop** on and accept location. TablePing uses ~76 m cells and ignores anything farther than ~120 m. It will **not** match someone across town.
+**Shop-scale GPS:** both turn **I’m at the shop** on and accept location. TableTrade uses ~76 m cells and ignores anything farther than ~120 m. It will **not** match someone across town.
 
-If you are testing alone, you do not need a second phone: use **Try a demo ping**.
+If you are testing alone, you do not need a second phone: use **See a demo ping now**.
 
 ---
 
@@ -139,4 +139,4 @@ Live nearby uses HiveMQ’s **public** MQTT broker as a v1 convenience so there 
 
 ## License
 
-Personal project. Pokémon and Pokémon card art belong to their owners. TablePing is an unofficial fan tool.
+Personal project. Pokémon and Pokémon card art belong to their owners. TableTrade is an unofficial fan tool.

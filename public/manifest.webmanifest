@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "TablePing",
-  "short_name": "TablePing",
-  "description": "Pokémon TCG have/want lists and in-the-room trade pings.",
+  "name": "TableTrade",
+  "short_name": "TableTrade",
+  "description": "Pokémon trades here, now. Have and want lists, and pings at this table.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
