@@ -46,12 +46,12 @@ export function AddCardSheet({
           <>
             <div className="grab" />
             <h2 className="panel-title">Add to {target === "have" ? "Have" : "Want"}</h2>
-            <p className="lede">Scan a card in front of you, or type a name.</p>
+            <p className="lede">Scan a card, or type a name.</p>
             <button type="button" className="btn ember full" onClick={openScan}>
               Scan cards
             </button>
             <p className="hint" style={{ margin: "10px 0 8px" }}>
-              Or type a name — sets work too, like Umbreon Evolving Skies
+              Or type a name, or a name and set.
             </p>
             <CardSearchPanel onPick={onPick} autoFocus />
             <div className="sheet-actions">

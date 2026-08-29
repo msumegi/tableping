@@ -13,6 +13,7 @@ import {
   saveWant,
   upsertCard,
 } from "./lib/storage";
+import { shopHint } from "./lib/copy";
 import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
 import { encodeGeohash, haversineMeters, MAX_MATCH_METERS } from "./lib/geo";
 import { kindLabel, matchAgainst } from "./lib/match";
@@ -101,7 +102,7 @@ export default function App() {
       setWant(seeded.want);
       haveRef.current = seeded.have;
       wantRef.current = seeded.want;
-      setSeedNote("Added Pikachu to Have and Charizard to Want, so you can see a ping now.");
+      setSeedNote("Added Pikachu to Have and Charizard to Want.");
     } else {
       setSeedNote("");
     }
@@ -179,13 +180,13 @@ export default function App() {
       setGeoStatus("This phone can’t share location.");
       return;
     }
-        setGeoStatus("Looking around this shop…");
-        watchId.current = navigator.geolocation.watchPosition(
-          (pos) => {
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
-            locationRef.current = { lat, lon, geohash: encodeGeohash(lat, lon) };
-            setGeoStatus("Looking for trades here — about a shop away.");
+    setGeoStatus("Looking around this shop…");
+    watchId.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        locationRef.current = { lat, lon, geohash: encodeGeohash(lat, lon) };
+        setGeoStatus("Ready to trade here.");
         setLive(true);
       },
       (err) => {
@@ -220,9 +221,9 @@ export default function App() {
         {tab === "have" && (
           <ListPane
             title="Have list"
-            lede="Cards you’d trade right now, at this table."
+            lede="Cards you’d trade here, now."
             cards={have}
-            empty="Nothing here yet. Add a card you’d actually trade."
+            empty="Nothing yet. Add a card you’d trade."
             onAdd={() => setAddingFor("have")}
             onRemove={(id) => setHave((prev) => removeCard(prev, id))}
           />
@@ -230,9 +231,9 @@ export default function App() {
         {tab === "want" && (
           <ListPane
             title="Want list"
-            lede="Cards you want right now. We match the exact card, not just the name."
+            lede="Exact printings you want here."
             cards={want}
-            empty="Nothing here yet. Add a card you want at this table."
+            empty="Nothing yet. Add a card you want."
             onAdd={() => setAddingFor("want")}
             onRemove={(id) => setWant((prev) => removeCard(prev, id))}
           />
@@ -423,7 +424,7 @@ function NearbyPane({
         </div>
         <h2>Trade here, now.</h2>
         <p className="lede" style={{ color: "rgba(243,234,216,0.78)" }}>
-          A ping when someone at this table has what you want — or wants what you have.
+          A ping when lists match at this table.
         </p>
         <button className="btn ember full" onClick={onDemo}>
           See a demo ping now
@@ -435,14 +436,7 @@ function NearbyPane({
         <div className="toggle-row">
           <div>
             <strong>I’m at the shop</strong>
-            <p className="hint">
-              Off: Your phone stays quiet. Nobody sees you here, and you don’t see them.
-            </p>
-            <p className="hint">
-              On: looks about a shop away. If someone else here has this on and your lists match,
-              you both get a ping.
-            </p>
-            {gpsOn || geoStatus !== "Off" ? <p className="hint">{geoStatus}</p> : null}
+            <p className="hint">{shopHint(gpsOn, geoStatus)}</p>
           </div>
           <button className={gpsOn ? "btn" : "btn secondary"} onClick={() => onGps(!gpsOn)}>
             {gpsOn ? "On" : "Off"}
@@ -451,10 +445,8 @@ function NearbyPane({
         <div className="toggle-row">
           <div>
             <strong>Share a table code</strong>
-            <p className="hint">Indoor shops make GPS fuzzy, so this is the backup.</p>
             <p className="hint">
-              On: we show a short code. The person across from you types it below and taps Join.
-              Then you’re both at this table.
+              {tableOn ? "They type this code below, then Join." : "Backup when GPS is fuzzy indoors."}
             </p>
           </div>
           <button className={tableOn ? "btn" : "btn secondary"} onClick={() => onTable(!tableOn)}>
@@ -476,7 +468,7 @@ function NearbyPane({
               Join
             </button>
           </div>
-          <p className="hint">Type the code from their phone, then Join.</p>
+          <p className="hint">Type their code, then Join.</p>
         </div>
         <div>
           <div className="row">
@@ -487,9 +479,7 @@ function NearbyPane({
               Scan their QR
             </button>
           </div>
-          <p className="hint">
-            Same idea, no typing. Show your QR; they scan it. You’re matched at this table.
-          </p>
+          <p className="hint">Show your QR; they scan it.</p>
         </div>
         <details className="advanced">
           <summary>Advanced</summary>
@@ -504,7 +494,7 @@ function NearbyPane({
         Pings
       </h3>
       {matches.length === 0 ? (
-        <div className="empty">No one at this table yet. See a demo ping if you’re here alone.</div>
+        <div className="empty">No pings yet. Try a demo if you’re alone.</div>
       ) : (
         <div className="match-list">
           {matches.map((m) => (
@@ -536,7 +526,7 @@ function YouPane({
   return (
     <section>
       <h2 className="panel-title">You</h2>
-      <p className="lede">This stays on this phone. There is no account.</p>
+      <p className="lede">Stays on this phone. No account.</p>
       <div className="you-card stack">
         <label className="hint" htmlFor="name">
           Display name
@@ -551,7 +541,7 @@ function YouPane({
         <div className="toggle-row">
           <div>
             <strong>Demo mode</strong>
-            <div className="hint">See a ping now, even if you’re the only one at the table.</div>
+            <div className="hint">A ping without a second phone.</div>
           </div>
           <button className={settings.demoMode ? "btn" : "btn secondary"} onClick={() => onDemoMode(!settings.demoMode)}>
             {settings.demoMode ? "On" : "Off"}
@@ -562,10 +552,7 @@ function YouPane({
         </button>
       </div>
       <h3 className="panel-title">What this is</h3>
-      <p className="lede">
-        Pokémon only — not Magic, not One Piece. Lists of what you have and want. A ping when someone
-        at this table matches. Talk it out here — no later meetup.
-      </p>
+      <p className="lede">Pokémon only. Match here, then talk. No later meetup.</p>
       <h3 className="panel-title">Put it on your phone</h3>
       <p className="lede">
         On Chrome: menu → <strong>Add to Home screen</strong>. Then open TableTrade like any other
@@ -610,7 +597,7 @@ function PingSheet({ match, onClose }: { match: TradeMatch; onClose: () => void 
             match.
           </p>
         ) : null}
-        <p className="hint">You’re already here — go talk. TableTrade doesn’t set up a later meetup.</p>
+        <p className="hint">You’re here. Go talk.</p>
         <div className="sheet-actions">
           <button className="btn ember full" onClick={onClose}>
             Go talk
@@ -646,7 +633,7 @@ function QrSheet({
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="grab" />
         <h2 className="panel-title">Your table QR</h2>
-        <p className="lede">Hold this up. The person across from you scans it — you’re matched at this table.</p>
+        <p className="lede">They scan this. You’re matched at this table.</p>
         <div className="qr-box">{url ? <img src={url} alt="TableTrade QR" /> : <p className="hint">Drawing…</p>}</div>
         {err ? <p className="status error">{err}</p> : null}
         <div className="sheet-actions">
@@ -667,7 +654,7 @@ function ScanSheet({
   onPresence: (p: Presence) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [err, setErr] = useState("Point at their TableTrade QR — the one on their phone, right now.");
+  const [err, setErr] = useState("Point at their QR.");
   const streamRef = useRef<MediaStream | null>(null);
   const timer = useRef(0);
   const onPresenceRef = useRef(onPresence);
