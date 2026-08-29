@@ -69,12 +69,19 @@ describe("marketing site is disconnected from the app Pages deploy", () => {
   });
 
   it("leads with what TableTrade is, not what it is not", () => {
-    expect(html).not.toMatch(/Not a 25-mile marketplace/i);
-    expect(html).not.toMatch(/Not Magic/);
-    expect(html).not.toMatch(/Not One Piece/);
-    expect(html).not.toMatch(/Not a city-wide marketplace/i);
-    expect(html).not.toMatch(/no other TCGs/i);
+    const pages = html + about;
+    expect(pages).not.toMatch(/Magic/);
+    expect(pages).not.toMatch(/One Piece/);
+    expect(pages).not.toMatch(/marketplace/i);
+    expect(pages).not.toMatch(/meetup scheduler/i);
+    expect(pages).not.toMatch(/city-wide/i);
+    expect(pages).not.toMatch(/25-mile/i);
+    expect(pages).not.toMatch(/no other TCGs/i);
+    expect(pages).not.toMatch(/city radius/i);
     expect(about).not.toMatch(/SLICE/i);
+    expect(html).toContain("Immediate. Local. Pokémon at this table.");
+    expect(html).toContain("Shop-scale. Pokémon only.");
+    expect(html).toContain("Match here, then talk.");
     expect(html).toContain("have-list");
     expect(html).toContain("want-list");
     expect(html).toMatch(/scan or search/i);
