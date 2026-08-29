@@ -159,12 +159,26 @@ h2,
   font-weight: 700;
 }
 
+.hero-titles {
+  margin: 0 0 18px;
+}
+
 h1 {
   font-size: clamp(2.4rem, 9vw, 4.6rem);
   line-height: 0.96;
-  margin: 0 0 18px;
+  margin: 0 0 8px;
   max-width: 18ch;
   font-optical-sizing: auto;
+}
+
+.hero-tagline {
+  font-family: Fraunces, Georgia, serif;
+  font-style: italic;
+  font-weight: 560;
+  font-size: clamp(1.35rem, 3.6vw, 2rem);
+  letter-spacing: -0.02em;
+  color: var(--lamp);
+  margin: 0;
 }
 
 .pitch {
@@ -445,6 +459,11 @@ h1 {
 
 .close h2 {
   max-width: 18ch;
+  margin-bottom: 8px;
+}
+
+.close-tag {
+  margin: 0 0 16px;
 }
 
 .close p {
@@ -497,7 +516,7 @@ h1 {
   }
 
   .kicker { grid-area: kicker; }
-  h1 { grid-area: title; }
+  .hero-titles { grid-area: title; }
   .pitch { grid-area: pitch; }
   .cta-row { grid-area: cta; }
   .studio { grid-area: studio; }
