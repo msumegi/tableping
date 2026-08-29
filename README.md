@@ -14,6 +14,8 @@ Pokémon only. No Magic. No One Piece.
 
 Built for **Matthew** to try on an Android phone.
 
+Share **TableTrade**: **[tableping/welcome](https://msumegi.github.io/tableping/welcome/)** — *Trade here, now.* Static marketing page. The live app stays at the site root (`/tableping/`).
+
 ---
 
 ## Try it on Android (no developer tools)
@@ -25,6 +27,10 @@ TableTrade is a small phone website you can install like an app (a PWA). Use **C
 After this repo is on GitHub and Pages is on, open:
 
 **https://msumegi.github.io/tableping/**
+
+**TableTrade** marketing / landing page (share this with shops and friends):
+
+**https://msumegi.github.io/tableping/welcome/**
 
 If that link 404s, turn on GitHub Pages once (takes about a minute):
 
