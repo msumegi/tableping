@@ -14,8 +14,7 @@ export default defineConfig({
       manifest: false,
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,webp,woff2}"],
-        // Marketing page is a real static file. Do not serve the SPA shell for /welcome/.
-        globIgnores: ["**/welcome/**"],
+        // Old /welcome marketing path — 404 instead of serving the PWA shell.
         navigateFallbackDenylist: [/\/welcome(?:\/|$)/],
         runtimeCaching: [
           {
