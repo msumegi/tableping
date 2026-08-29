@@ -209,7 +209,7 @@ export default function App() {
       <header className="topbar">
         <div>
           <h1 className="brand">
-            Table<span>Ping</span>
+            Table<span>Trade</span>
           </h1>
           <p className="tag">Pokémon trades here, now — at this table</p>
         </div>
@@ -568,7 +568,7 @@ function YouPane({
       </p>
       <h3 className="panel-title">Put it on your phone</h3>
       <p className="lede">
-        On Chrome: menu → <strong>Add to Home screen</strong>. Then open TablePing like any other
+        On Chrome: menu → <strong>Add to Home screen</strong>. Then open TableTrade like any other
         app.
       </p>
     </section>
@@ -610,7 +610,7 @@ function PingSheet({ match, onClose }: { match: TradeMatch; onClose: () => void 
             match.
           </p>
         ) : null}
-        <p className="hint">You’re already here — go talk. TablePing doesn’t set up a later meetup.</p>
+        <p className="hint">You’re already here — go talk. TableTrade doesn’t set up a later meetup.</p>
         <div className="sheet-actions">
           <button className="btn ember full" onClick={onClose}>
             Go talk
@@ -647,7 +647,7 @@ function QrSheet({
         <div className="grab" />
         <h2 className="panel-title">Your table QR</h2>
         <p className="lede">Hold this up. The person across from you scans it — you’re matched at this table.</p>
-        <div className="qr-box">{url ? <img src={url} alt="TablePing QR" /> : <p className="hint">Drawing…</p>}</div>
+        <div className="qr-box">{url ? <img src={url} alt="TableTrade QR" /> : <p className="hint">Drawing…</p>}</div>
         {err ? <p className="status error">{err}</p> : null}
         <div className="sheet-actions">
           <button className="btn secondary full" onClick={onClose}>
@@ -667,7 +667,7 @@ function ScanSheet({
   onPresence: (p: Presence) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [err, setErr] = useState("Point at their TablePing QR — the one on their phone, right now.");
+  const [err, setErr] = useState("Point at their TableTrade QR — the one on their phone, right now.");
   const streamRef = useRef<MediaStream | null>(null);
   const timer = useRef(0);
   const onPresenceRef = useRef(onPresence);

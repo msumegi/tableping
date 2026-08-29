@@ -42,7 +42,7 @@ export const initialScanState: ScanState = {
 
 export function cameraDeniedMessage(): string {
   if (typeof window !== "undefined" && window.isSecureContext === false) {
-    return "This page can't use the camera. Open TablePing at https://msumegi.github.io/tableping/.";
+    return "This page can't use the camera. Open TableTrade at https://msumegi.github.io/tableping/.";
   }
   if (typeof navigator !== "undefined" && !navigator.mediaDevices?.getUserMedia) {
     return "This browser can't use the camera. Try Chrome on Android.";

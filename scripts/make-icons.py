@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate TablePing PWA icons. No secrets; local asset only."""
+"""Generate TableTrade PWA icons. No secrets; local asset only."""
 
 from pathlib import Path
 

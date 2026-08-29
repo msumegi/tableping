@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "TablePing",
-  "short_name": "TablePing",
+  "name": "TableTrade",
+  "short_name": "TableTrade",
   "description": "Pokémon trades here, now. Have and want lists, and pings at this table.",
   "start_url": ".",
   "scope": ".",
