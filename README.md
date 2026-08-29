@@ -14,6 +14,8 @@ Pokémon only. No Magic. No One Piece.
 
 Built for **Matthew** to try on an Android phone.
 
+Share the product: **[tableping/welcome](https://msumegi.github.io/tableping/welcome/)** — a static marketing page. The live PWA stays at the site root.
+
 ---
 
 ## Try it on Android (no developer tools)
@@ -25,6 +27,10 @@ TablePing is a small phone website you can install like an app (a PWA). Use **Ch
 After this repo is on GitHub and Pages is on, open:
 
 **https://msumegi.github.io/tableping/**
+
+Marketing / landing page (share this with shops and friends):
+
+**https://msumegi.github.io/tableping/welcome/**
 
 If that link 404s, turn on GitHub Pages once (takes about a minute):
 

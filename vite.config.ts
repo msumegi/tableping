@@ -14,6 +14,9 @@ export default defineConfig({
       manifest: false,
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,webp,woff2}"],
+        // Marketing page is a real static file. Do not serve the SPA shell for /welcome/.
+        globIgnores: ["**/welcome/**"],
+        navigateFallbackDenylist: [/\/welcome(?:\/|$)/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/images\.pokemontcg\.io\/.*/i,
