@@ -79,9 +79,14 @@ describe("marketing site is disconnected from the app Pages deploy", () => {
     expect(pages).not.toMatch(/no other TCGs/i);
     expect(pages).not.toMatch(/city radius/i);
     expect(about).not.toMatch(/SLICE/i);
+    expect(pages).not.toMatch(/Tinder/i);
+    expect(html).toContain("What Makes Us Special");
+    expect(html).toContain("Bring your have-list and want-list into the shop.");
     expect(html).toContain("Immediate. Local. Pokémon at this table.");
     expect(html).toContain("Shop-scale. Pokémon only.");
     expect(html).toContain("Match here, then talk.");
+    expect(html).toContain("You’re already sitting together.");
+    expect(html).toContain("Lives on the phone at the table.");
     expect(html).toContain("have-list");
     expect(html).toContain("want-list");
     expect(html).toMatch(/scan or search/i);
