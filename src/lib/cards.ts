@@ -8,7 +8,7 @@ const SEARCH_TIMEOUT_MS = 8000;
 
 /** Shown when the live catalog is down and the name is not in the local list. */
 export const SEARCH_UNAVAILABLE =
-  "Can't reach the card catalog right now. Try a well-known name like Pikachu, or check your connection.";
+  "Can't reach the card list right now. Try a well-known name like Pikachu, or check your connection.";
 
 type PtcgCard = {
   id?: string;

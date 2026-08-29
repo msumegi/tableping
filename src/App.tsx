@@ -101,7 +101,7 @@ export default function App() {
       setWant(seeded.want);
       haveRef.current = seeded.have;
       wantRef.current = seeded.want;
-      setSeedNote("Demo added Base Set Pikachu to Have and Charizard to Want.");
+      setSeedNote("Added Pikachu to Have and Charizard to Want, so you can see a ping now.");
     } else {
       setSeedNote("");
     }
@@ -176,16 +176,16 @@ export default function App() {
       return;
     }
     if (!navigator.geolocation) {
-      setGeoStatus("This phone has no geolocation.");
+      setGeoStatus("This phone can’t share location.");
       return;
     }
-    setGeoStatus("Finding the shop…");
-    watchId.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        locationRef.current = { lat, lon, geohash: encodeGeohash(lat, lon) };
-        setGeoStatus("Looking for trades about a shop away.");
+        setGeoStatus("Looking around this shop…");
+        watchId.current = navigator.geolocation.watchPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            locationRef.current = { lat, lon, geohash: encodeGeohash(lat, lon) };
+            setGeoStatus("Looking for trades here — about a shop away.");
         setLive(true);
       },
       (err) => {
@@ -211,7 +211,7 @@ export default function App() {
           <h1 className="brand">
             Table<span>Ping</span>
           </h1>
-          <p className="tag">Pokémon trades at the table — not across town</p>
+          <p className="tag">Pokémon trades here, now — at this table</p>
         </div>
         {activePing ? <span className="pill ok">Ping</span> : <span className="pill">{settings.displayName}</span>}
       </header>
@@ -220,9 +220,9 @@ export default function App() {
         {tab === "have" && (
           <ListPane
             title="Have list"
-            lede="Cards you can trade away at the shop."
+            lede="Cards you’d trade right now, at this table."
             cards={have}
-            empty="Nothing listed yet. Add a card you would actually trade."
+            empty="Nothing here yet. Add a card you’d actually trade."
             onAdd={() => setAddingFor("have")}
             onRemove={(id) => setHave((prev) => removeCard(prev, id))}
           />
@@ -230,9 +230,9 @@ export default function App() {
         {tab === "want" && (
           <ListPane
             title="Want list"
-            lede="Printings you’re hunting. Matches use the exact card, not just the Pokémon name."
+            lede="Cards you want right now. We match the exact card, not just the name."
             cards={want}
-            empty="Empty hunt list. Search a card you still need."
+            empty="Nothing here yet. Add a card you want at this table."
             onAdd={() => setAddingFor("want")}
             onRemove={(id) => setWant((prev) => removeCard(prev, id))}
           />
@@ -421,13 +421,12 @@ function NearbyPane({
         <div className="radar" aria-hidden>
           <span className="dot" />
         </div>
-        <h2>Trade tonight, at this table.</h2>
+        <h2>Trade here, now.</h2>
         <p className="lede" style={{ color: "rgba(243,234,216,0.78)" }}>
-          When you’re at the shop, it pings the person across from you if your Have and Want
-          lists match.
+          A ping when someone at this table has what you want — or wants what you have.
         </p>
         <button className="btn ember full" onClick={onDemo}>
-          Try a demo ping
+          See a demo ping now
         </button>
         {seedNote ? <p className="hint">{seedNote}</p> : null}
       </div>
@@ -440,8 +439,8 @@ function NearbyPane({
               Off: Your phone stays quiet. Nobody sees you here, and you don’t see them.
             </p>
             <p className="hint">
-              On: Uses your location (about a shop away). If someone else in the shop has theirs
-              on too and your lists match, you both get a ping.
+              On: looks about a shop away. If someone else here has this on and your lists match,
+              you both get a ping.
             </p>
             {gpsOn || geoStatus !== "Off" ? <p className="hint">{geoStatus}</p> : null}
           </div>
@@ -454,9 +453,8 @@ function NearbyPane({
             <strong>Share a table code</strong>
             <p className="hint">Indoor shops make GPS fuzzy, so this is the backup.</p>
             <p className="hint">
-              When On, the app makes a short code and shows it. The person across from you types
-              that code into Join table code and taps Join. Then you’re both at the same table,
-              even if the map is confused.
+              On: we show a short code. The person across from you types it below and taps Join.
+              Then you’re both at this table.
             </p>
           </div>
           <button className={tableOn ? "btn" : "btn secondary"} onClick={() => onTable(!tableOn)}>
@@ -478,7 +476,7 @@ function NearbyPane({
               Join
             </button>
           </div>
-          <p className="hint">Enter the code from their phone, then Join.</p>
+          <p className="hint">Type the code from their phone, then Join.</p>
         </div>
         <div>
           <div className="row">
@@ -490,8 +488,7 @@ function NearbyPane({
             </button>
           </div>
           <p className="hint">
-            Same idea as the table code, but no typing. You tap Show my QR; they tap Scan their QR
-            and point at your screen. That matches you at the table.
+            Same idea, no typing. Show your QR; they scan it. You’re matched at this table.
           </p>
         </div>
         <details className="advanced">
@@ -507,7 +504,7 @@ function NearbyPane({
         Pings
       </h3>
       {matches.length === 0 ? (
-        <div className="empty">No pings yet. Use demo mode if you’re testing alone.</div>
+        <div className="empty">No one at this table yet. See a demo ping if you’re here alone.</div>
       ) : (
         <div className="match-list">
           {matches.map((m) => (
@@ -554,26 +551,25 @@ function YouPane({
         <div className="toggle-row">
           <div>
             <strong>Demo mode</strong>
-            <div className="hint">Lets you see a match ping without a second real user.</div>
+            <div className="hint">See a ping now, even if you’re the only one at the table.</div>
           </div>
           <button className={settings.demoMode ? "btn" : "btn secondary"} onClick={() => onDemoMode(!settings.demoMode)}>
             {settings.demoMode ? "On" : "Off"}
           </button>
         </div>
         <button className="btn ember" onClick={onDemo}>
-          Fire a demo ping now
+          See a demo ping now
         </button>
       </div>
-      <h3 className="panel-title">What v1 is</h3>
+      <h3 className="panel-title">What this is</h3>
       <p className="lede">
-        Pokémon TCG only. Have/want lists. Type a name or scan one card at a time. In-the-room pings
-        when someone nearby has what you want, wants what you have, or both. No meetup scheduler. No
-        Magic. No One Piece. No city-wide radius.
+        Pokémon only — not Magic, not One Piece. Lists of what you have and want. A ping when someone
+        at this table matches. Talk it out here — no later meetup.
       </p>
-      <h3 className="panel-title">Install on Android</h3>
+      <h3 className="panel-title">Put it on your phone</h3>
       <p className="lede">
-        Chrome menu → <strong>Add to Home screen</strong> / <strong>Install app</strong>. TablePing
-        then opens like a phone app.
+        On Chrome: menu → <strong>Add to Home screen</strong>. Then open TablePing like any other
+        app.
       </p>
     </section>
   );
@@ -589,11 +585,11 @@ function PingSheet({ match, onClose }: { match: TradeMatch; onClose: () => void 
         <div className="radar" aria-hidden>
           <span className="dot" />
         </div>
-        <div className="ping-kicker">{match.source === "demo" ? "Demo ping" : "Table ping"}</div>
+        <div className="ping-kicker">{match.source === "demo" ? "Demo ping" : "Here, now"}</div>
         <h2 className="ping-title">{match.peer.name} is at your table</h2>
         <p className="lede">{kindLabel(match.kind)}</p>
         {match.distanceM != null ? (
-          <p className="hint">About {Math.max(1, Math.round(match.distanceM))} m away</p>
+          <p className="hint">About {Math.max(1, Math.round(match.distanceM))} m from here</p>
         ) : null}
         <div className="match-pair">
           <div>
@@ -610,14 +606,14 @@ function PingSheet({ match, onClose }: { match: TradeMatch; onClose: () => void 
         </div>
         {match.youCanGive.length + match.youCanGet.length > 2 ? (
           <p className="hint">
-            Plus {Math.max(0, match.youCanGive.length - 1) + Math.max(0, match.youCanGet.length - 1)} more overlapping
-            printings.
+            Plus {Math.max(0, match.youCanGive.length - 1) + Math.max(0, match.youCanGet.length - 1)} more cards that
+            match.
           </p>
         ) : null}
-        <p className="hint">You’re already in the same room — go talk. TablePing does not schedule meetups.</p>
+        <p className="hint">You’re already here — go talk. TablePing doesn’t set up a later meetup.</p>
         <div className="sheet-actions">
           <button className="btn ember full" onClick={onClose}>
-            Got it
+            Go talk
           </button>
         </div>
       </div>
@@ -649,8 +645,8 @@ function QrSheet({
     <div className="qr-sheet" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="grab" />
-        <h2 className="panel-title">Table QR</h2>
-        <p className="lede">The person across from you scans this. That matches you at the table.</p>
+        <h2 className="panel-title">Your table QR</h2>
+        <p className="lede">Hold this up. The person across from you scans it — you’re matched at this table.</p>
         <div className="qr-box">{url ? <img src={url} alt="TablePing QR" /> : <p className="hint">Drawing…</p>}</div>
         {err ? <p className="status error">{err}</p> : null}
         <div className="sheet-actions">
@@ -671,7 +667,7 @@ function ScanSheet({
   onPresence: (p: Presence) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [err, setErr] = useState("Point the camera at their TablePing QR.");
+  const [err, setErr] = useState("Point at their TablePing QR — the one on their phone, right now.");
   const streamRef = useRef<MediaStream | null>(null);
   const timer = useRef(0);
   const onPresenceRef = useRef(onPresence);
@@ -695,7 +691,7 @@ function ScanSheet({
         video.srcObject = stream;
         await video.play();
         if (typeof BarcodeDetector === "undefined") {
-          setErr("This browser can’t scan QR. Use Chrome on Android, or type their table code instead.");
+          setErr("This browser can’t scan QR. Use Chrome on Android, or type their table code.");
           return;
         }
         const detector = new BarcodeDetector({ formats: ["qr_code"] });
@@ -732,7 +728,7 @@ function ScanSheet({
     <div className="qr-sheet" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="grab" />
-        <h2 className="panel-title">Scan table QR</h2>
+        <h2 className="panel-title">Scan their QR</h2>
         <div className="video-wrap">
           <video ref={videoRef} playsInline muted />
         </div>

@@ -151,7 +151,7 @@ export function CardScanLoop({
     <div className="scan-loop">
       <div className="grab" />
       <h2 className="panel-title">Scan to {listLabel}</h2>
-      <p className="lede">One card at a time. Confirm, then flip to the next.</p>
+      <p className="lede">One card in front of you. Confirm, then flip to the next.</p>
       {showCamera ? (
         <div className={`scan-video-wrap${state.phase === "confirm" || state.phase === "pick" || state.typeaheadOpen ? " compact" : ""}`}>
           <video ref={videoRef} playsInline muted autoPlay />

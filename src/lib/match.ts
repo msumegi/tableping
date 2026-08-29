@@ -50,10 +50,10 @@ export function matchAgainst(
 export function kindLabel(kind: MatchKind): string {
   switch (kind) {
     case "both":
-      return "Two-way trade";
-    case "they_want_yours":
+      return "You can trade both ways";
+      case "they_want_yours":
       return "They want a card you have";
-    case "you_want_theirs":
+      case "you_want_theirs":
       return "They have a card you want";
   }
 }

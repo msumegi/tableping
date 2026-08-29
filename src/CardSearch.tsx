@@ -24,7 +24,7 @@ export function CardSearchPanel({
     try {
       const found = await searchCards(term);
       setResults(found);
-      if (!found.length) setErr("No cards for that. Try a name, or a name and set.");
+      if (!found.length) setErr("Nothing for that. Try a name, or a name and set.");
     } catch {
       setErr(SEARCH_UNAVAILABLE);
     } finally {
