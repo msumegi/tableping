@@ -79,6 +79,16 @@ describe("scan loop reducer", () => {
     expect(state.notice.toLowerCase()).toMatch(/camera permission denied|can't use the camera/);
   });
 
+  it("type-ahead add while camera is denied stays on type-ahead", () => {
+    let state = scanReducer(initialScanState, { type: "permissionDenied" });
+    state = scanReducer(state, { type: "added", card: SAMPLE_PIKACHU, alreadyHad: false });
+    expect(state.phase).toBe("denied");
+    expect(state.typeaheadOpen).toBe(true);
+    expect(state.addedCount).toBe(1);
+    expect(state.notice).toMatch(/Added Pikachu/i);
+    expect(state.notice).toMatch(/Type another name|Done/i);
+  });
+
   it("Not this one falls back to the other printings or type-ahead", () => {
     let state = scanReducer(initialScanState, { type: "cameraReady" });
     state = scanReducer(state, {

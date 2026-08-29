@@ -123,19 +123,35 @@ export function scanReducer(state: ScanState, action: ScanAction): ScanState {
         chosen: action.card,
         notice: "Is this the card?",
       };
-    case "added":
+    case "added": {
+      const addedNotice = action.alreadyHad
+        ? `Already on the list. Flip to the next card.`
+        : `Added ${action.card.name}. Flip to the next card.`;
+      const nextCount = action.alreadyHad ? state.addedCount : state.addedCount + 1;
+      if (state.phase === "denied" || state.phase === "ocrfail") {
+        return {
+          ...state,
+          chosen: null,
+          candidates: [],
+          addedCount: nextCount,
+          lastAddedId: action.card.id,
+          typeaheadOpen: true,
+          notice: action.alreadyHad
+            ? "Already on the list. Type another name, or tap Done."
+            : `Added ${action.card.name}. Type another name, or tap Done.`,
+        };
+      }
       return {
         ...state,
         phase: "live",
         chosen: null,
         candidates: [],
-        addedCount: action.alreadyHad ? state.addedCount : state.addedCount + 1,
+        addedCount: nextCount,
         lastAddedId: action.card.id,
         typeaheadOpen: false,
-        notice: action.alreadyHad
-          ? `Already on the list. Flip to the next card.`
-          : `Added ${action.card.name}. Flip to the next card.`,
+        notice: addedNotice,
       };
+    }
     case "notThis": {
       const rest = state.candidates.filter((c) => c.id !== state.chosen?.id);
       if (rest.length) {
