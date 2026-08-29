@@ -402,6 +402,39 @@ img {
   gap: 10px;
 }
 
+.toggle-row {
+  align-items: flex-start;
+}
+
+.toggle-row .btn {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.hint + .hint,
+.row + .hint {
+  margin-top: 6px;
+}
+
+.toggle-row strong + .hint {
+  margin-top: 4px;
+}
+
+.advanced {
+  margin-top: 4px;
+}
+
+.advanced summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.75rem;
+  user-select: none;
+}
+
+.advanced .hint {
+  margin: 8px 0 0;
+}
+
 .stack {
   display: grid;
   gap: 10px;
@@ -493,6 +526,7 @@ img {
 .hint {
   font-size: 0.82rem;
   color: var(--muted);
+  margin: 0;
 }
 
 .qr-box {

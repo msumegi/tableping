@@ -185,7 +185,7 @@ export default function App() {
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
         locationRef.current = { lat, lon, geohash: encodeGeohash(lat, lon) };
-        setGeoStatus("In-room radar on (~120 m, not city-wide).");
+        setGeoStatus("Looking for trades about a shop away.");
         setLive(true);
       },
       (err) => {
@@ -249,7 +249,10 @@ export default function App() {
             matches={matches}
             liveCount={livePeersNote}
             seedNote={seedNote}
-            onGps={setGpsOn}
+            onGps={(on) => {
+              if (!on) setGeoStatus("Off");
+              setGpsOn(on);
+            }}
             onTable={(on) => {
               setTableOn(on);
               if (on) {
@@ -418,10 +421,10 @@ function NearbyPane({
         <div className="radar" aria-hidden>
           <span className="dot" />
         </div>
-        <h2>Same room, not same city</h2>
+        <h2>Trade tonight, at this table.</h2>
         <p className="lede" style={{ color: "rgba(243,234,216,0.78)" }}>
-          TablePing only looks about a shop away (~120 m) or at people who share your table
-          code. It will not search a 25-mile radius.
+          When you’re at the shop, it pings the person across from you if your Have and Want
+          lists match.
         </p>
         <button className="btn ember full" onClick={onDemo}>
           Try a demo ping
@@ -433,7 +436,14 @@ function NearbyPane({
         <div className="toggle-row">
           <div>
             <strong>I’m at the shop</strong>
-            <div className="hint">{geoStatus}</div>
+            <p className="hint">
+              Off: Your phone stays quiet. Nobody sees you here, and you don’t see them.
+            </p>
+            <p className="hint">
+              On: Uses your location (about a shop away). If someone else in the shop has theirs
+              on too and your lists match, you both get a ping.
+            </p>
+            {gpsOn || geoStatus !== "Off" ? <p className="hint">{geoStatus}</p> : null}
           </div>
           <button className={gpsOn ? "btn" : "btn secondary"} onClick={() => onGps(!gpsOn)}>
             {gpsOn ? "On" : "Off"}
@@ -442,37 +452,55 @@ function NearbyPane({
         <div className="toggle-row">
           <div>
             <strong>Share a table code</strong>
-            <div className="hint">Indoor shops where GPS is fuzzy. Show this to the person across from you.</div>
+            <p className="hint">Indoor shops make GPS fuzzy, so this is the backup.</p>
+            <p className="hint">
+              When On, the app makes a short code and shows it. The person across from you types
+              that code into Join table code and taps Join. Then you’re both at the same table,
+              even if the map is confused.
+            </p>
           </div>
           <button className={tableOn ? "btn" : "btn secondary"} onClick={() => onTable(!tableOn)}>
             {tableOn ? "On" : "Off"}
           </button>
         </div>
         {tableOn && settings.tableCode ? <div className="code">{settings.tableCode}</div> : null}
-        <div className="row">
-          <input
-            className="field"
-            placeholder="Join table code"
-            value={joinCode}
-            onChange={(e) => onJoinCode(e.target.value.toUpperCase())}
-            autoCapitalize="characters"
-          />
-          <button className="btn felt" onClick={onJoin}>
-            Join
-          </button>
+        <div>
+          <div className="row">
+            <input
+              className="field"
+              placeholder="Type their table code"
+              aria-label="Type their table code"
+              value={joinCode}
+              onChange={(e) => onJoinCode(e.target.value.toUpperCase())}
+              autoCapitalize="characters"
+            />
+            <button className="btn felt" onClick={onJoin}>
+              Join
+            </button>
+          </div>
+          <p className="hint">Enter the code from their phone, then Join.</p>
         </div>
-        <div className="row">
-          <button className="btn secondary" onClick={onShowQr}>
-            Show my QR
-          </button>
-          <button className="btn secondary" onClick={onScan}>
-            Scan their QR
-          </button>
+        <div>
+          <div className="row">
+            <button className="btn secondary" onClick={onShowQr}>
+              Show my QR
+            </button>
+            <button className="btn secondary" onClick={onScan}>
+              Scan their QR
+            </button>
+          </div>
+          <p className="hint">
+            Same idea as the table code, but no typing. You tap Show my QR; they tap Scan their QR
+            and point at your screen. That matches you at the table.
+          </p>
         </div>
-        <p className="hint">
-          Live: {live ? "yes" : "no"} · Broker: {brokerStatus}
-          {liveCount ? ` · ${liveCount} recent ping${liveCount === 1 ? "" : "s"}` : ""}
-        </p>
+        <details className="advanced">
+          <summary>Advanced</summary>
+          <p className="hint">
+            Live: {live ? "yes" : "no"} · Broker: {brokerStatus}
+            {liveCount ? ` · ${liveCount} recent ping${liveCount === 1 ? "" : "s"}` : ""}
+          </p>
+        </details>
       </div>
 
       <h3 className="panel-title" style={{ marginTop: 18 }}>
@@ -622,7 +650,7 @@ function QrSheet({
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="grab" />
         <h2 className="panel-title">Table QR</h2>
-        <p className="lede">Someone at the same table scans this. No city-wide broadcast.</p>
+        <p className="lede">The person across from you scans this. That matches you at the table.</p>
         <div className="qr-box">{url ? <img src={url} alt="TablePing QR" /> : <p className="hint">Drawing…</p>}</div>
         {err ? <p className="status error">{err}</p> : null}
         <div className="sheet-actions">
