@@ -14,7 +14,7 @@ Pokémon only. No Magic. No One Piece.
 
 Built for **Matthew** to try on an Android phone.
 
-Share **TableTrade**: **[tableping/welcome](https://msumegi.github.io/tableping/welcome/)** — *Trade here, now.* Static marketing page. The live app stays at the site root (`/tableping/`).
+Share **TableTrade**: **[tabletrade](https://msumegi.github.io/tabletrade/)** — *Trade here, now.* Marketing lives on its own GitHub Pages site (address bar says **tabletrade**). The live app stays at **[tableping](https://msumegi.github.io/tableping/)**.
 
 ---
 
@@ -30,9 +30,11 @@ After this repo is on GitHub and Pages is on, open:
 
 **TableTrade** marketing / landing page (share this with shops and friends):
 
-**https://msumegi.github.io/tableping/welcome/**
+**https://msumegi.github.io/tabletrade/**
 
-If that link 404s, turn on GitHub Pages once (takes about a minute):
+That page is a **different repo** (`msumegi/tabletrade`), so editing the URL cannot drop you into the app. If the marketing link 404s, create the repo and publish the seed (see [Publish the marketing site](#publish-the-marketing-site) below).
+
+If the **app** link 404s, turn on GitHub Pages once (takes about a minute):
 
 1. On a computer, open the repo: https://github.com/msumegi/tableping
 2. **Settings** → **Pages**
@@ -132,6 +134,23 @@ npm run preview
 | Live nearby | Shop-scale [geohash](https://en.wikipedia.org/wiki/Geohash) + optional table code over a public MQTT demo broker | Automatic ping when two phones are actually close |
 
 Live nearby uses HiveMQ’s **public** MQTT broker as a v1 convenience so there is no server to host and **no secrets to commit**. Treat it as a demo radio, not a private backend. Names and card ids of people who tap “I’m at the shop” can be seen on that channel. Turn it off when you leave the table. QR exchange does not use the broker.
+
+---
+
+## Publish the marketing site
+
+The share page is no longer nested on this app's Pages site. It belongs in a separate public repo, **[msumegi/tabletrade](https://github.com/msumegi/tabletrade)**, so GitHub Pages serves it at `https://msumegi.github.io/tabletrade/`.
+
+The Cursor GitHub App on this repo cannot create other repositories. From a machine logged in as **msumegi**:
+
+```bash
+gh auth login
+./scripts/publish-tabletrade.sh
+```
+
+That script creates `msumegi/tabletrade` (if needed), pushes `scripts/tabletrade-seed/` as the site root, and turns on Pages. If Pages still 404s: **Settings → Pages → Source: GitHub Actions** (or **Deploy from a branch** → `main` → `/ (root)`).
+
+This app repo stays `tableping`. Do not rename it for the marketing URL.
 
 ---
 
