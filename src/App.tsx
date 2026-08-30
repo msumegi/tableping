@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Card, MatchSource, Presence, Settings, Tab, TradeMatch } from "./types";
 import { AddCardSheet } from "./AddCardSheet";
+import { ProfilePhotoSheet } from "./ProfilePhotoSheet";
 import {
   loadHave,
   loadSeenMatchIds,
@@ -78,6 +79,7 @@ export default function App() {
   const [activePing, setActivePing] = useState<TradeMatch | null>(null);
   const [showQr, setShowQr] = useState(false);
   const [showScan, setShowScan] = useState(false);
+  const [showPhoto, setShowPhoto] = useState(false);
   const [seedNote, setSeedNote] = useState("");
 
   const haveRef = useRef(have);
@@ -329,14 +331,7 @@ export default function App() {
             settings={settings}
             installed={isStandalonePwa()}
             onName={(displayName) => remember({ ...settings, displayName })}
-            onPhoto={async (file) => {
-              try {
-                const photo = await compressProfilePhoto(file);
-                remember({ ...settingsRef.current, photo });
-              } catch {
-                /* keep the last photo */
-              }
-            }}
+            onOpenPhoto={() => setShowPhoto(true)}
             onClearPhoto={() => remember({ ...settings, photo: undefined })}
             onDemoMode={(demoMode) => remember({ ...settings, demoMode })}
             onDemo={fireDemo}
@@ -379,6 +374,20 @@ export default function App() {
           }}
         />
       )}
+      {showPhoto ? (
+        <ProfilePhotoSheet
+          onClose={() => setShowPhoto(false)}
+          onPhoto={async (file) => {
+            try {
+              const photo = await compressProfilePhoto(file);
+              remember({ ...settingsRef.current, photo });
+              setShowPhoto(false);
+            } catch {
+              /* keep the last photo */
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -703,7 +712,7 @@ function YouPane({
   settings,
   installed,
   onName,
-  onPhoto,
+  onOpenPhoto,
   onClearPhoto,
   onDemoMode,
   onDemo,
@@ -711,7 +720,7 @@ function YouPane({
   settings: Settings;
   installed: boolean;
   onName: (name: string) => void;
-  onPhoto: (file: File) => void;
+  onOpenPhoto: () => void;
   onClearPhoto: () => void;
   onDemoMode: (on: boolean) => void;
   onDemo: () => void;
@@ -734,20 +743,9 @@ function YouPane({
         <div className="photo-row">
           <Face name={settings.displayName} photo={settings.photo} large />
           <div className="stack" style={{ flex: 1 }}>
-            <label className="btn secondary full photo-pick">
+            <button className="btn secondary full" onClick={onOpenPhoto}>
               {settings.photo ? "Change photo" : "Add a photo"}
-              <input
-                type="file"
-                accept="image/*"
-                capture="user"
-                hidden
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) onPhoto(file);
-                  e.target.value = "";
-                }}
-              />
-            </label>
+            </button>
             {settings.photo ? (
               <button className="btn secondary" onClick={onClearPhoto}>
                 Remove
