@@ -35,6 +35,10 @@ describe("marketing landing page is a static public file", () => {
     expect(html).not.toMatch(/Play Store|Google Play/i);
     expect(html).toMatch(/four-character table code|table code or QR/i);
     expect(html).not.toMatch(/~120/);
+    expect(html).not.toMatch(/Tinder/i);
+    expect(html).not.toMatch(/Magic/);
+    expect(html).not.toMatch(/One Piece/);
+    expect(html).not.toMatch(/marketplace/i);
   });
 
   it("keeps /welcome/ out of the PWA navigation fallback", () => {

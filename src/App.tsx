@@ -18,15 +18,21 @@ import {
   HAVE_FIRST_RUN_BODY,
   HAVE_FIRST_RUN_PRIVACY,
   HAVE_FIRST_RUN_TITLE,
+  HAVE_LEDE,
   INSTALL_ANDROID,
   INSTALL_HEADING,
   INSTALL_IPHONE,
   INSTALL_NO_ACCOUNT,
+  NEARBY_LEDE,
   PRIVACY_FAN,
   PRIVACY_LISTS,
   PRIVACY_PING,
+  QR_SHEET_LEDE,
   shopHint,
   tableShareHint,
+  WANT_LEDE,
+  YOU_LEDE,
+  YOU_WHAT,
 } from "./lib/copy";
 import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
 import { encodeGeohash, haversineMeters, MAX_MATCH_METERS } from "./lib/geo";
@@ -246,7 +252,7 @@ export default function App() {
         {tab === "have" && (
           <ListPane
             title="Have list"
-            lede="Cards you’d trade here, now."
+            lede={HAVE_LEDE}
             cards={have}
             empty="Nothing yet. Add a card you’d trade."
             intro={
@@ -259,7 +265,7 @@ export default function App() {
         {tab === "want" && (
           <ListPane
             title="Want list"
-            lede="Exact printings you want here."
+            lede={WANT_LEDE}
             cards={want}
             empty="Nothing yet. Add a card you want."
             onAdd={() => setAddingFor("want")}
@@ -473,7 +479,7 @@ function NearbyPane({
         </div>
         <h2>Trade here, now.</h2>
         <p className="lede" style={{ color: "rgba(243,234,216,0.78)" }}>
-          Join this table with a code or QR. A ping when lists match — then talk.
+          {NEARBY_LEDE}
         </p>
         <button className="btn ember full" onClick={onDemo}>
           See a demo ping now
@@ -517,7 +523,7 @@ function NearbyPane({
               Join
             </button>
           </div>
-          <p className="hint">Type their code, then Join — or scan their QR.</p>
+          <p className="hint">The other types it or scans. That is the join.</p>
         </div>
         <button className="btn secondary full" onClick={onScan}>
           Scan their QR
@@ -579,7 +585,7 @@ function YouPane({
   return (
     <section>
       <h2 className="panel-title">You</h2>
-      <p className="lede">Stays on this phone. No account.</p>
+      <p className="lede">{YOU_LEDE}</p>
       <div className="you-card stack">
         <label className="hint" htmlFor="name">
           Display name
@@ -605,7 +611,7 @@ function YouPane({
         </button>
       </div>
       <h3 className="panel-title">What this is</h3>
-      <p className="lede">Pokémon only. Match here, then talk. No later meetup.</p>
+      <p className="lede">{YOU_WHAT}</p>
       <ul className="privacy-lines">
         <li>{PRIVACY_LISTS}</li>
         <li>{PRIVACY_PING}</li>
@@ -689,7 +695,7 @@ function QrSheet({ code, onClose }: { code: string; onClose: () => void }) {
         <div className="grab" />
         <h2 className="panel-title">This table</h2>
         <p className="code">{code}</p>
-        <p className="lede">They scan this QR or type the code to join this table.</p>
+        <p className="lede">{QR_SHEET_LEDE}</p>
         <div className="qr-box">{url ? <img src={url} alt={`QR to join table ${code}`} /> : <p className="hint">Drawing…</p>}</div>
         {err ? <p className="status error">{err}</p> : null}
         <div className="sheet-actions">
