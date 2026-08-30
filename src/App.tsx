@@ -561,7 +561,6 @@ function NearbyPane({
             <div className="shop-list">
               {shops
                 .filter((s) => !s.hinted)
-                .slice(0, shopQuery ? 12 : 6)
                 .map((shop) => (
                   <ShopRow key={shop.id} shop={shop} onCheckIn={onCheckIn} />
                 ))}
