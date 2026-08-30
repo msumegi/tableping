@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Card, MatchSource, Presence, Settings, Tab, TradeMatch } from "./types";
 import { AddCardSheet } from "./AddCardSheet";
 import {
@@ -13,13 +13,28 @@ import {
   saveWant,
   upsertCard,
 } from "./lib/storage";
-import { shopHint } from "./lib/copy";
+import {
+  gpsOptionalHint,
+  HAVE_FIRST_RUN_BODY,
+  HAVE_FIRST_RUN_PRIVACY,
+  HAVE_FIRST_RUN_TITLE,
+  INSTALL_ANDROID,
+  INSTALL_HEADING,
+  INSTALL_IPHONE,
+  INSTALL_NO_ACCOUNT,
+  PRIVACY_FAN,
+  PRIVACY_LISTS,
+  PRIVACY_PING,
+  shopHint,
+  tableShareHint,
+} from "./lib/copy";
 import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
 import { encodeGeohash, haversineMeters, MAX_MATCH_METERS } from "./lib/geo";
+import { pageJoinUrl, readJoinCodeFromUrl, stripJoinParams } from "./lib/join";
 import { kindLabel, matchAgainst } from "./lib/match";
 import { connectLocalHub, connectPresenceHub, HEARTBEAT_MS, PRESENCE_TTL_MS } from "./lib/presence";
-import { decodePresenceQr, presenceToQrDataUrl } from "./lib/qr";
-import { normalizeTableCode, randomTableCode } from "./lib/tableCode";
+import { decodeTableQr, tableJoinToQrDataUrl } from "./lib/qr";
+import { normalizeTableCode } from "./lib/tableCode";
 
 const TABS: { id: Tab; ico: string; lbl: string }[] = [
   { id: "have", ico: "▣", lbl: "Have" },
@@ -64,6 +79,16 @@ export default function App() {
   function remember(next: Settings) {
     setSettings(next);
   }
+
+  useEffect(() => {
+    const code = readJoinCodeFromUrl(window.location.href);
+    if (!code) return;
+    remember({ ...settingsRef.current, tableCode: code });
+    setTableOn(true);
+    setLive(true);
+    setTab("nearby");
+    window.history.replaceState({}, "", stripJoinParams(window.location.href));
+  }, []);
 
   function addCard(list: "have" | "want", card: Card, keepSheet = false) {
     if (list === "have") setHave((prev) => upsertCard(prev, card));
@@ -209,7 +234,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div>
-          <h1 className="brand">
+          <h1 className="brand" aria-label="TableTrade">
             Table<span>Trade</span>
           </h1>
           <p className="tag">Pokémon trades here, now — at this table</p>
@@ -224,6 +249,9 @@ export default function App() {
             lede="Cards you’d trade here, now."
             cards={have}
             empty="Nothing yet. Add a card you’d trade."
+            intro={
+              have.length === 0 ? <HaveFirstRun showInstall={!isStandalonePwa()} /> : null
+            }
             onAdd={() => setAddingFor("have")}
             onRemove={(id) => setHave((prev) => removeCard(prev, id))}
           />
@@ -256,11 +284,7 @@ export default function App() {
             }}
             onTable={(on) => {
               setTableOn(on);
-              if (on) {
-                const code = settings.tableCode || randomTableCode();
-                remember({ ...settings, tableCode: code });
-                setLive(true);
-              }
+              if (on) setLive(true);
             }}
             onJoinCode={setJoinCode}
             onJoin={() => {
@@ -279,6 +303,7 @@ export default function App() {
         {tab === "you" && (
           <YouPane
             settings={settings}
+            installed={isStandalonePwa()}
             onName={(displayName) => remember({ ...settings, displayName })}
             onDemoMode={(demoMode) => remember({ ...settings, demoMode })}
             onDemo={fireDemo}
@@ -307,21 +332,21 @@ export default function App() {
       {activePing && (
         <PingSheet match={activePing} onClose={() => setActivePing(null)} />
       )}
-      {showQr && (
-        <QrSheet
-          name={settings.displayName}
-          have={have}
-          want={want}
-          userId={settings.userId}
-          onClose={() => setShowQr(false)}
-        />
-      )}
+      {showQr && settings.tableCode ? (
+        <QrSheet code={settings.tableCode} onClose={() => setShowQr(false)} />
+      ) : null}
       {showScan && (
         <ScanSheet
           onClose={() => setShowScan(false)}
           onPresence={(p) => {
             setShowScan(false);
             ingestPeer(p, "qr");
+          }}
+          onJoin={(code) => {
+            setShowScan(false);
+            remember({ ...settingsRef.current, tableCode: code });
+            setTableOn(true);
+            setLive(true);
           }}
         />
       )}
@@ -334,6 +359,7 @@ function ListPane({
   lede,
   cards,
   empty,
+  intro,
   onAdd,
   onRemove,
 }: {
@@ -341,6 +367,7 @@ function ListPane({
   lede: string;
   cards: Card[];
   empty: string;
+  intro?: ReactNode;
   onAdd: () => void;
   onRemove: (id: string) => void;
 }) {
@@ -348,8 +375,9 @@ function ListPane({
     <section>
       <h2 className="panel-title">{title}</h2>
       <p className="lede">{lede}</p>
+      {intro}
       {cards.length === 0 ? (
-        <div className="empty">{empty}</div>
+        intro ? null : <div className="empty">{empty}</div>
       ) : (
         <div className="card-grid">
           {cards.map((card) => (
@@ -416,6 +444,27 @@ function NearbyPane({
   onScan: () => void;
   onOpenPing: (m: TradeMatch) => void;
 }) {
+  const [joinQr, setJoinQr] = useState("");
+  const tableCode = settings.tableCode;
+
+  useEffect(() => {
+    if (!tableCode) {
+      setJoinQr("");
+      return;
+    }
+    let cancelled = false;
+    tableJoinToQrDataUrl(pageJoinUrl(tableCode, window.location))
+      .then((url) => {
+        if (!cancelled) setJoinQr(url);
+      })
+      .catch(() => {
+        if (!cancelled) setJoinQr("");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tableCode]);
+
   return (
     <section>
       <div className="nearby-hero">
@@ -424,7 +473,7 @@ function NearbyPane({
         </div>
         <h2>Trade here, now.</h2>
         <p className="lede" style={{ color: "rgba(243,234,216,0.78)" }}>
-          A ping when lists match at this table.
+          Join this table with a code or QR. A ping when lists match — then talk.
         </p>
         <button className="btn ember full" onClick={onDemo}>
           See a demo ping now
@@ -432,28 +481,28 @@ function NearbyPane({
         {seedNote ? <p className="hint">{seedNote}</p> : null}
       </div>
 
-      <div className="you-card stack">
+      <div className="you-card stack table-share">
         <div className="toggle-row">
           <div>
-            <strong>I’m at the shop</strong>
-            <p className="hint">{shopHint(gpsOn, geoStatus)}</p>
-          </div>
-          <button className={gpsOn ? "btn" : "btn secondary"} onClick={() => onGps(!gpsOn)}>
-            {gpsOn ? "On" : "Off"}
-          </button>
-        </div>
-        <div className="toggle-row">
-          <div>
-            <strong>Share a table code</strong>
-            <p className="hint">
-              {tableOn ? "They type this code below, then Join." : "Backup when GPS is fuzzy indoors."}
-            </p>
+            <strong>This table</strong>
+            <p className="hint">{tableShareHint(tableOn)}</p>
           </div>
           <button className={tableOn ? "btn" : "btn secondary"} onClick={() => onTable(!tableOn)}>
             {tableOn ? "On" : "Off"}
           </button>
         </div>
-        {tableOn && settings.tableCode ? <div className="code">{settings.tableCode}</div> : null}
+        {tableCode ? (
+          <p className="code" aria-label={`Table code ${tableCode.split("").join(" ")}`}>
+            {tableCode}
+          </p>
+        ) : null}
+        {joinQr ? (
+          <button className="qr-box qr-tap" type="button" onClick={onShowQr} aria-label="Enlarge table QR">
+            <img src={joinQr} alt={`QR to join table ${tableCode}`} />
+          </button>
+        ) : tableCode ? (
+          <p className="hint">Drawing QR…</p>
+        ) : null}
         <div>
           <div className="row">
             <input
@@ -468,19 +517,21 @@ function NearbyPane({
               Join
             </button>
           </div>
-          <p className="hint">Type their code, then Join.</p>
+          <p className="hint">Type their code, then Join — or scan their QR.</p>
         </div>
-        <div>
-          <div className="row">
-            <button className="btn secondary" onClick={onShowQr}>
-              Show my QR
-            </button>
-            <button className="btn secondary" onClick={onScan}>
-              Scan their QR
+        <button className="btn secondary full" onClick={onScan}>
+          Scan their QR
+        </button>
+        <details className="optional-gps">
+          <summary>I’m at the shop (optional)</summary>
+          <p className="hint">{gpsOptionalHint()}</p>
+          <div className="toggle-row">
+            <p className="hint">{shopHint(gpsOn, geoStatus)}</p>
+            <button className={gpsOn ? "btn" : "btn secondary"} onClick={() => onGps(!gpsOn)}>
+              {gpsOn ? "On" : "Off"}
             </button>
           </div>
-          <p className="hint">Show your QR; they scan it.</p>
-        </div>
+        </details>
         <details className="advanced">
           <summary>Advanced</summary>
           <p className="hint">
@@ -514,11 +565,13 @@ function NearbyPane({
 
 function YouPane({
   settings,
+  installed,
   onName,
   onDemoMode,
   onDemo,
 }: {
   settings: Settings;
+  installed: boolean;
   onName: (name: string) => void;
   onDemoMode: (on: boolean) => void;
   onDemo: () => void;
@@ -553,11 +606,25 @@ function YouPane({
       </div>
       <h3 className="panel-title">What this is</h3>
       <p className="lede">Pokémon only. Match here, then talk. No later meetup.</p>
-      <h3 className="panel-title">Put it on your phone</h3>
-      <p className="lede">
-        On Chrome: menu → <strong>Add to Home screen</strong>. Then open TableTrade like any other
-        app.
-      </p>
+      <ul className="privacy-lines">
+        <li>{PRIVACY_LISTS}</li>
+        <li>{PRIVACY_PING}</li>
+        <li>{PRIVACY_FAN}</li>
+      </ul>
+      <h3 className="panel-title">{INSTALL_HEADING}</h3>
+      {installed ? (
+        <p className="lede">On your home screen. {INSTALL_NO_ACCOUNT}</p>
+      ) : (
+        <div className="you-card stack">
+          <p className="hint">{INSTALL_NO_ACCOUNT}</p>
+          <p className="lede" style={{ margin: 0 }}>
+            {INSTALL_IPHONE}
+          </p>
+          <p className="lede" style={{ margin: 0 }}>
+            {INSTALL_ANDROID}
+          </p>
+        </div>
+      )}
     </section>
   );
 }
@@ -608,33 +675,22 @@ function PingSheet({ match, onClose }: { match: TradeMatch; onClose: () => void 
   );
 }
 
-function QrSheet({
-  name,
-  have,
-  want,
-  userId,
-  onClose,
-}: {
-  name: string;
-  have: Card[];
-  want: Card[];
-  userId: string;
-  onClose: () => void;
-}) {
+function QrSheet({ code, onClose }: { code: string; onClose: () => void }) {
   const [url, setUrl] = useState("");
   const [err, setErr] = useState("");
   useEffect(() => {
-    presenceToQrDataUrl({ userId, name, have, want })
+    tableJoinToQrDataUrl(pageJoinUrl(code, window.location))
       .then(setUrl)
       .catch(() => setErr("Could not draw a QR code."));
-  }, [userId, name, have, want]);
+  }, [code]);
   return (
     <div className="qr-sheet" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="grab" />
-        <h2 className="panel-title">Your table QR</h2>
-        <p className="lede">They scan this. You’re matched at this table.</p>
-        <div className="qr-box">{url ? <img src={url} alt="TableTrade QR" /> : <p className="hint">Drawing…</p>}</div>
+        <h2 className="panel-title">This table</h2>
+        <p className="code">{code}</p>
+        <p className="lede">They scan this QR or type the code to join this table.</p>
+        <div className="qr-box">{url ? <img src={url} alt={`QR to join table ${code}`} /> : <p className="hint">Drawing…</p>}</div>
         {err ? <p className="status error">{err}</p> : null}
         <div className="sheet-actions">
           <button className="btn secondary full" onClick={onClose}>
@@ -649,16 +705,20 @@ function QrSheet({
 function ScanSheet({
   onClose,
   onPresence,
+  onJoin,
 }: {
   onClose: () => void;
   onPresence: (p: Presence) => void;
+  onJoin: (code: string) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [err, setErr] = useState("Point at their QR.");
   const streamRef = useRef<MediaStream | null>(null);
   const timer = useRef(0);
   const onPresenceRef = useRef(onPresence);
+  const onJoinRef = useRef(onJoin);
   onPresenceRef.current = onPresence;
+  onJoinRef.current = onJoin;
 
   useEffect(() => {
     let cancelled = false;
@@ -687,9 +747,13 @@ function ScanSheet({
           try {
             const codes = await detector.detect(videoRef.current);
             for (const code of codes) {
-              const presence = decodePresenceQr(code.rawValue);
-              if (presence) {
-                onPresenceRef.current(presence);
+              const decoded = decodeTableQr(code.rawValue);
+              if (decoded?.kind === "presence") {
+                onPresenceRef.current(decoded.presence);
+                return;
+              }
+              if (decoded?.kind === "join") {
+                onJoinRef.current(decoded.code);
                 return;
               }
             }
@@ -727,6 +791,31 @@ function ScanSheet({
         </div>
       </div>
     </div>
+  );
+}
+
+function HaveFirstRun({ showInstall }: { showInstall: boolean }) {
+  return (
+    <div className="first-run">
+      <h3>{HAVE_FIRST_RUN_TITLE}</h3>
+      <p>{HAVE_FIRST_RUN_BODY}</p>
+      <p className="hint">{HAVE_FIRST_RUN_PRIVACY}</p>
+      {showInstall ? (
+        <p className="install-quiet">
+          <strong>{INSTALL_HEADING}.</strong> {INSTALL_NO_ACCOUNT} {INSTALL_IPHONE} {INSTALL_ANDROID}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function isStandalonePwa(): boolean {
+  if (typeof window === "undefined") return false;
+  const nav = window.navigator as Navigator & { standalone?: boolean };
+  return (
+    nav.standalone === true ||
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.matchMedia("(display-mode: fullscreen)").matches
   );
 }
 

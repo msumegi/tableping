@@ -1,4 +1,6 @@
 import type { Card, Presence } from "../types";
+import { readJoinCodeFromUrl } from "./join";
+import { normalizeTableCode } from "./tableCode";
 
 const PREFIX = "TPv1:";
 
@@ -55,14 +57,40 @@ export function decodePresenceQr(raw: string): Presence | null {
   }
 }
 
+const QR_DRAW = {
+  margin: 1,
+  width: 360,
+  color: { dark: "#1c1410", light: "#f3ead8" },
+  errorCorrectionLevel: "M" as const,
+};
+
 export async function presenceToQrDataUrl(
   presence: Pick<Presence, "userId" | "name" | "have" | "want">,
 ): Promise<string> {
   const QRCode = (await import("qrcode")).default;
-  return QRCode.toDataURL(encodePresenceQr(presence), {
-    margin: 1,
-    width: 360,
-    color: { dark: "#1c1410", light: "#f3ead8" },
-    errorCorrectionLevel: "M",
-  });
+  return QRCode.toDataURL(encodePresenceQr(presence), QR_DRAW);
+}
+
+export async function tableJoinToQrDataUrl(joinHref: string): Promise<string> {
+  const QRCode = (await import("qrcode")).default;
+  return QRCode.toDataURL(joinHref, QR_DRAW);
+}
+
+export type DecodedTableQr =
+  | { kind: "presence"; presence: Presence }
+  | { kind: "join"; code: string };
+
+export function decodeTableQr(raw: string): DecodedTableQr | null {
+  const text = raw.trim();
+  const presence = decodePresenceQr(text);
+  if (presence) return { kind: "presence", presence };
+
+  const fromUrl = readJoinCodeFromUrl(text);
+  if (fromUrl) return { kind: "join", code: fromUrl };
+
+  const code = normalizeTableCode(text);
+  if (code.length >= 4 && code.length <= 6 && /^[A-Z0-9]+$/.test(code) && !/[\s/]/.test(text)) {
+    return { kind: "join", code };
+  }
+  return null;
 }

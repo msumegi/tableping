@@ -8,7 +8,7 @@ If you and someone else at the same card shop are both using TableTrade, you get
 - they have a card you want, or
 - both.
 
-This is **not** a city-wide dating-radius app. v1 looks about a **shop / room** away (~120 meters) or at people who share a **table code / QR** at the same table. There is no meetup scheduler.
+This is **not** a city-wide dating-radius app. Two people join the **same table** with a **four-character table code or QR**. Optional shop GPS is imperfect indoors and is not the main way to match. There is no meetup scheduler.
 
 Pokémon only. No Magic. No One Piece.
 
@@ -48,6 +48,8 @@ If that link 404s, turn on GitHub Pages once (takes about a minute):
 4. Tap **Install** / **Add**
 5. Open **TableTrade** from the home screen like any other app
 
+**iPhone:** open the same link in **Safari** → Share → **Add to Home Screen**. No account needed.
+
 ### 3. Tap through the first session
 
 1. Open **You** and set your display name
@@ -70,16 +72,14 @@ Camera is also used to scan another TableTrade user’s table QR.
 
 Do this when you are actually standing at the same table. City-wide matching is out of scope.
 
-**Easiest indoors (GPS is often wrong inside shops):**
+**Table code or QR (the reliable way, including indoors):**
 
 1. Both people add have/want cards
-2. One person taps **Nearby** → **Show my QR**
-3. The other taps **Scan their QR** and points at the first phone
-4. If the lists overlap, both can get a ping (the scanner sees it immediately)
+2. One person opens **Nearby**, turns **This table** on, and shows the large four-character code or QR
+3. The other types the code and taps **Join**, or taps **Scan their QR**
+4. If the lists overlap, both can get a ping
 
-**Table code:** one person turns **Share a table code** on and reads the four characters. The other types it under **Join table code**.
-
-**Shop-scale GPS:** both turn **I’m at the shop** on and accept location. TableTrade uses ~76 m cells and ignores anything farther than ~120 m. It will **not** match someone across town.
+**Optional shop GPS:** both can expand **I’m at the shop** and accept location. Indoor shops and basements often break GPS. It will **not** match someone across town.
 
 If you are testing alone, you do not need a second phone: use **See a demo ping now**.
 
