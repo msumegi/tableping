@@ -51,9 +51,24 @@ export function kindLabel(kind: MatchKind): string {
   switch (kind) {
     case "both":
       return "You can trade both ways";
-      case "they_want_yours":
+    case "they_want_yours":
       return "They want a card you have";
-      case "you_want_theirs":
+    case "you_want_theirs":
       return "They have a card you want";
+  }
+}
+
+export function sourceLabel(source: MatchSource): string {
+  switch (source) {
+    case "shop":
+      return "Here";
+    case "demo":
+      return "Demo";
+    case "table":
+      return "Table";
+    case "qr":
+      return "QR";
+    case "gps":
+      return "Here";
   }
 }

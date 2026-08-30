@@ -47,7 +47,7 @@ describe("trade matching", () => {
       want: [],
       ts: 1,
     };
-    const match = matchAgainst(me, peer, "gps");
+    const match = matchAgainst(me, peer, "shop");
     expect(match?.kind).toBe("you_want_theirs");
     expect(match?.youCanGet.map((c) => c.id)).toEqual([SAMPLE_CHARIZARD.id]);
   });

@@ -46,6 +46,8 @@ export function loadSettings(): Settings {
     userId: stored?.userId || newUserId(),
     demoMode: Boolean(stored?.demoMode),
     tableCode: stored?.tableCode || randomTableCode(),
+    photo: stored?.photo,
+    lastShopId: stored?.lastShopId,
   };
 }
 

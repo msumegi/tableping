@@ -33,7 +33,7 @@ describe("marketing landing page is a static public file", () => {
     expect(html).toMatch(/Nintendo|Pokémon Company|Pokemon Company/);
     expect(html).toContain("Open TableTrade");
     expect(html).not.toMatch(/Play Store|Google Play/i);
-    expect(html).toMatch(/four-character table code|table code or QR/i);
+    expect(html).toMatch(/Check in|I’m here|in this shop/i);
     expect(html).not.toMatch(/~120/);
     expect(html).not.toMatch(/Tinder/i);
     expect(html).not.toMatch(/Magic/);

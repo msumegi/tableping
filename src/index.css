@@ -454,13 +454,13 @@ img {
   cursor: pointer;
 }
 
-.optional-gps {
-  margin-top: 4px;
+.optional-table {
+  margin-top: 16px;
   padding-top: 8px;
   border-top: 1px solid rgba(243, 234, 216, 0.08);
 }
 
-.optional-gps summary {
+.optional-table summary {
   cursor: pointer;
   color: var(--muted);
   font-size: 0.82rem;
@@ -468,12 +468,102 @@ img {
   user-select: none;
 }
 
-.optional-gps .hint {
+.optional-table .hint {
   margin: 8px 0;
 }
 
-.optional-gps .toggle-row {
+.optional-table .toggle-row {
   align-items: center;
+}
+
+.optional-table .code {
+  font-size: 1.8rem;
+  letter-spacing: 0.24em;
+}
+
+.optional-table .qr-box img {
+  width: min(160px, 42vw);
+}
+
+.checkin-card .shop-list {
+  display: grid;
+  gap: 8px;
+}
+
+.shop-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(243, 234, 216, 0.06);
+}
+
+.shop-row.primary,
+.shop-row.hinted {
+  padding: 12px;
+  margin: 0 -4px;
+  border: 1px solid rgba(245, 215, 110, 0.22);
+  border-radius: 14px;
+  background: rgba(245, 215, 110, 0.06);
+}
+
+.shop-row .btn {
+  flex-shrink: 0;
+}
+
+.demo-after-checkin {
+  margin-top: 12px;
+}
+
+.photo-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #2a231c;
+  flex-shrink: 0;
+}
+
+.avatar.lg {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 10px;
+}
+
+.photo-row .avatar.lg {
+  margin: 0;
+}
+
+.avatar.fallback {
+  display: inline-grid;
+  place-items: center;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--electric);
+  background: #2a231c;
+  border: 1px solid rgba(245, 215, 110, 0.28);
+}
+
+.photo-pick {
+  text-align: center;
+}
+
+.match-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ping-sheet .avatar.lg {
+  margin-bottom: 8px;
 }
 
 .toggle-row,
