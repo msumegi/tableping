@@ -3,7 +3,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
-  gpsOptionalHint,
+  CHECKIN_CTA,
+  checkInHint,
   HAVE_FIRST_RUN_BODY,
   HAVE_FIRST_RUN_PRIVACY,
   HAVE_FIRST_RUN_TITLE,
@@ -11,11 +12,12 @@ import {
   INSTALL_ANDROID,
   INSTALL_IPHONE,
   INSTALL_NO_ACCOUNT,
+  locationHintCopy,
   NEARBY_LEDE,
+  PING_HERE,
   PRIVACY_FAN,
   PRIVACY_LISTS,
   PRIVACY_PING,
-  shopHint,
   tableShareHint,
   WANT_LEDE,
   YOU_LEDE,
@@ -26,46 +28,47 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const app = readFileSync(join(root, "src/App.tsx"), "utf8");
 const copySrc = readFileSync(join(root, "src/lib/copy.ts"), "utf8");
 
-describe("shop toggle hint", () => {
-  it("shows the quiet line when the shop toggle is off", () => {
-    expect(shopHint(false, "Off")).toBe("Your phone stays quiet. The app is off.");
+describe("check-in hint", () => {
+  it("shows the quiet line when you have not checked in", () => {
+    expect(checkInHint(false)).toBe("Your phone stays quiet. The app is off.");
   });
 
-  it("keeps a location error visible after the toggle drops off", () => {
-    expect(shopHint(false, "Location permission denied.")).toBe("Location permission denied.");
-  });
-
-  it("shows one ready line when the shop toggle is on", () => {
-    expect(shopHint(true, "Off")).toBe("Ready to trade here.");
-    expect(shopHint(true, "Ready to trade here.")).toBe("Ready to trade here.");
-    expect(shopHint(true, "Looking around this shop…")).toBe("Looking around this shop…");
+  it("names the shop after check-in", () => {
+    expect(checkInHint(true, "Wizard’s Loft")).toBe("You’re at Wizard’s Loft. Matches here will ping.");
+    expect(checkInHint(true)).toBe("You’re here. Matches in this shop will ping.");
   });
 });
 
 describe("join and first-run copy", () => {
-  it("echoes the site how-it-works on empty Have", () => {
+  it("echoes the site how-it-works on empty Have, with check-in as the room", () => {
     const text = `${HAVE_FIRST_RUN_TITLE} ${HAVE_FIRST_RUN_BODY} ${HAVE_FIRST_RUN_PRIVACY}`;
-    expect(HAVE_FIRST_RUN_TITLE).toBe("Here. This room. This table.");
-    expect(HAVE_FIRST_RUN_BODY).toMatch(/table code or QR/);
+    expect(HAVE_FIRST_RUN_TITLE).toBe("Here. This room. This shop.");
+    expect(HAVE_FIRST_RUN_BODY).toMatch(/Check in when you get here/);
     expect(HAVE_FIRST_RUN_BODY).toMatch(/lists overlap/);
     expect(HAVE_FIRST_RUN_BODY).toMatch(/Then you talk/);
     expect(HAVE_FIRST_RUN_PRIVACY).toBe("Lists live on the phone. No password.");
     expect(text.split(/\s+/).length).toBeLessThan(70);
   });
 
-  it("treats table code and QR as the real join", () => {
-    expect(NEARBY_LEDE).toMatch(/four-character table code or QR/);
-    expect(NEARBY_LEDE).toMatch(/That is the join/);
-    expect(tableShareHint(true)).toMatch(/code or scan the QR/);
-    expect(tableShareHint(false)).toMatch(/table code or QR/);
-    expect(tableShareHint(false)).not.toMatch(/backup|GPS/i);
+  it("treats shop check-in as the real join", () => {
+    expect(NEARBY_LEDE).toMatch(/Check in/);
+    expect(NEARBY_LEDE).toMatch(/buzzes you|ping/i);
+    expect(NEARBY_LEDE).toMatch(/Name and photo/);
+    expect(NEARBY_LEDE).not.toMatch(/table code|QR/);
+    expect(CHECKIN_CTA).toBe("I’m here");
+    expect(PING_HERE).toBe("is here");
   });
 
-  it("demotes GPS as optional and imperfect, without a 120 m claim", () => {
-    expect(gpsOptionalHint()).toMatch(/optional/i);
-    expect(gpsOptionalHint()).toMatch(/Indoor shops and basements often break GPS/);
-    expect(gpsOptionalHint()).toMatch(/Use the code or QR/);
-    expect(gpsOptionalHint()).not.toMatch(/120/);
+  it("keeps location as a hint, not the room", () => {
+    expect(locationHintCopy()).toMatch(/hint the shop/i);
+    expect(locationHintCopy()).toMatch(/I’m here/);
+    expect(locationHintCopy()).not.toMatch(/120/);
+    expect(locationHintCopy()).not.toMatch(/break GPS|basements often/i);
+  });
+
+  it("demotes table code to a side path", () => {
+    expect(tableShareHint(false)).toMatch(/if you want one/i);
+    expect(tableShareHint(true)).toMatch(/side path/i);
   });
 
   it("echoes the site FAQ for install and account", () => {
@@ -81,9 +84,9 @@ describe("join and first-run copy", () => {
     expect(HAVE_LEDE).toBe("Cards you’d trade here, now.");
     expect(WANT_LEDE).toBe("What you’re hunting.");
     expect(YOU_LEDE).toBe("Lists live on the phone. No password.");
-    expect(YOU_WHAT).toBe("Pokémon at this table. Match here, then talk.");
+    expect(YOU_WHAT).toBe("Pokémon in this shop. Match here, then talk.");
     expect(PRIVACY_LISTS).toMatch(/live on the device/);
-    expect(PRIVACY_PING).toBe("A ping when someone at this table is a match.");
+    expect(PRIVACY_PING).toBe("A ping when someone in this shop is a match.");
     expect(PRIVACY_FAN).toBe("TableTrade is an unofficial fan tool.");
   });
 
@@ -95,5 +98,17 @@ describe("join and first-run copy", () => {
     expect(surface).not.toMatch(/Lootstack/i);
     expect(surface).not.toMatch(/marketplace/i);
     expect(YOU_WHAT).not.toMatch(/later meetup|not a/i);
+  });
+});
+
+describe("Nearby leads with check-in", () => {
+  it("heroes I’m here before table code or QR", () => {
+    const nearby = app.slice(app.indexOf("function NearbyPane"));
+    const checkIn = nearby.search(/Check in|I’m here|CHECKIN_CTA/);
+    const table = nearby.search(/optional-table|This table|Type their table code/);
+    expect(checkIn).toBeGreaterThan(-1);
+    expect(table).toBeGreaterThan(checkIn);
+    expect(app).toMatch(/getCurrentPosition/);
+    expect(app).not.toMatch(/watchPosition/);
   });
 });

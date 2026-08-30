@@ -16,17 +16,21 @@ export function tableTopic(code: string): string {
   return `${PREFIX}/table/${code}`;
 }
 
+export function shopTopic(shopId: string): string {
+  return `${PREFIX}/shop/${shopId}`;
+}
+
 type Handler = (presence: Presence, topic: string) => void;
 
 export type PresenceHub = {
   publish: (presence: Presence) => void;
-  leave: (userId: string, geohash?: string, room?: string) => void;
+  leave: (userId: string, opts?: { geohash?: string; room?: string; shopId?: string }) => void;
   disconnect: () => void;
 };
 
 /**
- * Live presence for two phones in the same shop.
- * Topics are shop-scale geohash cells (~76m) and/or a 4-character table code.
+ * Live presence for two phones checked into the same shop.
+ * Shop topics are the room. Optional table codes stay as a side channel.
  * The HiveMQ public broker is a v1 convenience — not a private production backend.
  */
 export async function connectPresenceHub(onMessage: Handler): Promise<PresenceHub> {
@@ -63,6 +67,11 @@ export async function connectPresenceHub(onMessage: Handler): Promise<PresenceHu
   return {
     publish(presence) {
       const body = JSON.stringify(presence);
+      if (presence.shopId) {
+        const topic = shopTopic(presence.shopId);
+        ensureSub(topic);
+        client.publish(topic, body, { qos: 0, retain: false });
+      }
       if (presence.geohash) {
         for (const cell of geohashNeighborhood(presence.geohash)) {
           ensureSub(geoTopic(cell));
@@ -75,10 +84,11 @@ export async function connectPresenceHub(onMessage: Handler): Promise<PresenceHu
         client.publish(topic, body, { qos: 0, retain: false });
       }
     },
-    leave(userId, geohash, room) {
+    leave(userId, opts) {
       const payload = JSON.stringify({ userId, ts: 0, name: "", have: [], want: [] });
-      if (geohash) client.publish(geoTopic(geohash), payload, { qos: 0, retain: false });
-      if (room) client.publish(tableTopic(room), payload, { qos: 0, retain: false });
+      if (opts?.shopId) client.publish(shopTopic(opts.shopId), payload, { qos: 0, retain: false });
+      if (opts?.geohash) client.publish(geoTopic(opts.geohash), payload, { qos: 0, retain: false });
+      if (opts?.room) client.publish(tableTopic(opts.room), payload, { qos: 0, retain: false });
     },
     disconnect() {
       try {

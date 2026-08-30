@@ -8,7 +8,7 @@ If you and someone else at the same card shop are both using TableTrade, you get
 - they have a card you want, or
 - both.
 
-This is **not** a city-wide dating-radius app. Two people join the **same table** with a **four-character table code or QR**. Optional shop GPS is imperfect indoors and is not the main way to match. There is no meetup scheduler.
+This is **not** a city-wide dating-radius app. Two people **check in to the same shop** (tap **I’m here**). Matches in that shop ping, with a name and photo so you can find them in the room. GPS may hint which shop to offer. It does not decide you are in the room. A table code / QR can stay as an optional side path. There is no meetup scheduler.
 
 Pokémon only. No Magic. No One Piece.
 
@@ -56,7 +56,7 @@ If that link 404s, turn on GitHub Pages once (takes about a minute):
 2. Open **Have** → **Add a Pokémon card** → scan a card or search `Pikachu` → confirm a printing
 3. Open **Want** → scan or search `Charizard` → confirm a printing
 4. Open **Nearby** → tap **See a demo ping now**
-5. You should see a full-screen ping that **Kai (demo)** is at your table, with a card you can give and a card you can get
+5. You should see a full-screen ping that **Kai (demo)** is here, with a card you can give and a card you can get
 
 That’s the whole v1 loop: lists, add a card (type or scan), nearby/demo ping.
 
@@ -64,22 +64,22 @@ That’s the whole v1 loop: lists, add a card (type or scan), nearby/demo ping.
 
 Binder-page photos are not in this version (sleeves and glare make a whole page unreliable). Search-to-add is still there: typing `pik` still shows Pikachu, and `umbreon evolving skies` matches the set too.
 
-Camera is also used to scan another TableTrade user’s table QR.
+Camera can still scan an optional table QR if someone uses that side path.
 
 ---
 
 ## Two people at the same shop
 
-Do this when you are actually standing at the same table. City-wide matching is out of scope.
+Do this when you are actually in the same room. City-wide matching is out of scope.
 
-**Table code or QR (the reliable way, including indoors):**
+**Check in (the v1 path):**
 
-1. Both people add have/want cards
-2. One person opens **Nearby**, turns **This table** on, and shows the large four-character code or QR
-3. The other types the code and taps **Join**, or taps **Scan their QR**
-4. If the lists overlap, both can get a ping
+1. Both people add have/want cards and a display name (a photo helps)
+2. Both open **Nearby**, pick the shop — location can hint it — and tap **I’m here**
+3. If the lists overlap, both phones fire
+4. Find them by name and photo. Then you talk.
 
-**Optional shop GPS:** both can expand **I’m at the shop** and accept location. Indoor shops and basements often break GPS. It will **not** match someone across town.
+**Optional table code / QR:** still under **Table code** on Nearby. It is not the first thing on that screen.
 
 If you are testing alone, you do not need a second phone: use **See a demo ping now**.
 
@@ -128,10 +128,10 @@ npm run preview
 | Card scan | One-card camera loop + on-device OCR, then the same catalog search | Log 20–200 cards without retyping names; confirm before add |
 | Lists | `localStorage` on the device | No account |
 | Demo ping | Local complementary trainer named Kai | One tester can see a ping |
-| Same-table QR | QR encodes have/want | Works in a shop even when GPS is junk |
-| Live nearby | Shop-scale [geohash](https://en.wikipedia.org/wiki/Geohash) + optional table code over a public MQTT demo broker | Automatic ping when two phones are actually close |
+| Same-shop check-in | Named shop id over a public MQTT demo broker | Automatic ping when two phones tap I’m here at the same shop |
+| Optional table QR | Join URL / have-want payload | Side path. Not the first thing on Nearby |
 
-Live nearby uses HiveMQ’s **public** MQTT broker as a v1 convenience so there is no server to host and **no secrets to commit**. Treat it as a demo radio, not a private backend. Names and card ids of people who tap “I’m at the shop” can be seen on that channel. Turn it off when you leave the table. QR exchange does not use the broker.
+Live nearby uses HiveMQ’s **public** MQTT broker as a v1 convenience so there is no server to host and **no secrets to commit**. Treat it as a demo radio, not a private backend. Names, photos, and card ids of people who tap **I’m here** can be seen on that channel. Leave the shop when you walk out.
 
 ---
 
