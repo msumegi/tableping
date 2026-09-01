@@ -25,8 +25,8 @@ describe("marketing landing page is a static public file", () => {
     expect(html).not.toMatch(/TablePing/);
     expect(html).not.toMatch(/NowTrade/);
     expect(html).not.toMatch(/tonight/i);
-    expect(html).toContain("Central Alberta Technologies");
-    expect(html).toContain("Lead Developer");
+    expect(html).toContain("Range Road Technologies");
+    expect(html).toContain("Built by");
     expect(html).toContain("Matt Sumegi");
     expect(html).toContain("https://msumegi.github.io/tableping/");
     expect(html).toMatch(/unofficial/i);
