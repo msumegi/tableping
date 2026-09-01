@@ -7,17 +7,11 @@ export function locationHintCopy(): string {
   return "Location can hint the shop. You tap I’m here.";
 }
 
-export function tableShareHint(tableOn: boolean): string {
-  return tableOn
-    ? "They type this code or scan the QR. A side path if you want one."
-    : "A table code if you want one.";
-}
-
 export const HAVE_LEDE = "Cards you’d trade here, now.";
 
 export const WANT_LEDE = "What you’re hunting.";
 
-export const NEARBY_LEDE = "Check in. A match in this shop buzzes you. Name and photo — find them in the room.";
+export const NEARBY_LEDE = "Check in. A match in this shop buzzes you. Name and photo. Find them in the room.";
 
 export const YOU_LEDE = "Lists live on the phone. No password.";
 
@@ -46,10 +40,20 @@ export const PRIVACY_PING = "A ping when someone in this shop is a match.";
 
 export const PRIVACY_FAN = "TableTrade is an unofficial fan tool.";
 
-export const QR_SHEET_LEDE = "They scan this QR or type the code.";
-
 export const PING_HERE = "is here";
 
 export const CHECKIN_CTA = "I’m here";
 
 export const LEAVE_SHOP = "Leave";
+
+export const COMPANY = "Range Road Technologies";
+
+export const BUILT_BY = "Built by Matthew Sumegi";
+
+export const SITE_HOME = "https://rangeroadtech.com/";
+
+export const SITE_APP_PAGE = "https://rangeroadtech.com/apps/tabletrade/";
+
+export const SITE_PRIVACY = "https://rangeroadtech.com/privacy/";
+
+export const HELP_MAIL = "help@rangeroadtech.com";

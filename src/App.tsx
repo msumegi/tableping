@@ -32,8 +32,12 @@ import {
   PRIVACY_FAN,
   PRIVACY_LISTS,
   PRIVACY_PING,
-  QR_SHEET_LEDE,
-  tableShareHint,
+  SITE_APP_PAGE,
+  SITE_HOME,
+  SITE_PRIVACY,
+  HELP_MAIL,
+  COMPANY,
+  BUILT_BY,
   WANT_LEDE,
   YOU_LEDE,
   YOU_PHOTO_HINT,
@@ -41,11 +45,9 @@ import {
 } from "./lib/copy";
 import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
 import { presenceMatchSource } from "./lib/checkin";
-import { pageJoinUrl, readJoinCodeFromUrl, stripJoinParams } from "./lib/join";
 import { kindLabel, matchAgainst, sourceLabel } from "./lib/match";
 import { compressProfilePhoto, initialsFromName } from "./lib/photo";
 import { connectLocalHub, connectPresenceHub, HEARTBEAT_MS, PRESENCE_TTL_MS } from "./lib/presence";
-import { decodeTableQr, tableJoinToQrDataUrl } from "./lib/qr";
 import {
   formatShopDistance,
   rankShops,
@@ -53,7 +55,6 @@ import {
   shopById,
   type Shop,
 } from "./lib/shops";
-import { normalizeTableCode } from "./lib/tableCode";
 
 const TABS: { id: Tab; ico: string; lbl: string }[] = [
   { id: "have", ico: "▣", lbl: "Have" },
@@ -72,13 +73,9 @@ export default function App() {
   const [checkedIn, setCheckedIn] = useState<Shop | null>(null);
   const [here, setHere] = useState<{ lat: number; lon: number } | null>(null);
   const [hintStatus, setHintStatus] = useState("");
-  const [tableOn, setTableOn] = useState(false);
-  const [joinCode, setJoinCode] = useState("");
   const [brokerStatus, setBrokerStatus] = useState<"idle" | "live" | "error">("idle");
   const [matches, setMatches] = useState<TradeMatch[]>([]);
   const [activePing, setActivePing] = useState<TradeMatch | null>(null);
-  const [showQr, setShowQr] = useState(false);
-  const [showScan, setShowScan] = useState(false);
   const [showPhoto, setShowPhoto] = useState(false);
   const [seedNote, setSeedNote] = useState("");
 
@@ -86,14 +83,12 @@ export default function App() {
   const wantRef = useRef(want);
   const settingsRef = useRef(settings);
   const checkedInRef = useRef(checkedIn);
-  const tableOnRef = useRef(tableOn);
   const seenRef = useRef<Set<string>>(new Set(loadSeenMatchIds()));
 
   haveRef.current = have;
   wantRef.current = want;
   settingsRef.current = settings;
   checkedInRef.current = checkedIn;
-  tableOnRef.current = tableOn;
 
   useEffect(() => saveHave(have), [have]);
   useEffect(() => saveWant(want), [want]);
@@ -112,18 +107,8 @@ export default function App() {
 
   function leaveShop() {
     setCheckedIn(null);
-    if (!tableOnRef.current) setLive(false);
+    setLive(false);
   }
-
-  useEffect(() => {
-    const code = readJoinCodeFromUrl(window.location.href);
-    if (!code) return;
-    remember({ ...settingsRef.current, tableCode: code });
-    setTableOn(true);
-    setLive(true);
-    setTab("nearby");
-    window.history.replaceState({}, "", stripJoinParams(window.location.href));
-  }, []);
 
   function addCard(list: "have" | "want", card: Card, keepSheet = false) {
     if (list === "have") setHave((prev) => upsertCard(prev, card));
@@ -163,7 +148,6 @@ export default function App() {
     remember({ ...settingsRef.current, demoMode: true });
     const shop = checkedInRef.current;
     const demo = complementaryDemoPresence(haveRef.current, wantRef.current, {
-      room: tableOn ? settingsRef.current.tableCode : "DEMO",
       shopId: shop?.id,
       shopName: shop?.name,
     });
@@ -176,8 +160,6 @@ export default function App() {
     const classify = (p: Presence) =>
       presenceMatchSource(p, {
         shopId: checkedInRef.current?.id,
-        tableOn: tableOnRef.current,
-        tableCode: settingsRef.current.tableCode,
       });
     const local = connectLocalHub((p) => {
       const source = classify(p);
@@ -213,7 +195,6 @@ export default function App() {
         want: wantRef.current,
         shopId: shop?.id,
         shopName: shop?.name,
-        room: tableOnRef.current ? settingsRef.current.tableCode : undefined,
         ts: Date.now(),
       };
       local.publish(presence);
@@ -227,12 +208,11 @@ export default function App() {
       window.clearInterval(id);
       remote?.leave(settingsRef.current.userId, {
         shopId: checkedInRef.current?.id,
-        room: tableOnRef.current ? settingsRef.current.tableCode : undefined,
       });
       remote?.disconnect();
       local.disconnect();
     };
-  }, [live, checkedIn?.id, tableOn, settings.tableCode, settings.userId, settings.displayName, settings.photo]);
+  }, [live, checkedIn?.id, settings.userId, settings.displayName, settings.photo]);
 
   function requestShopHint() {
     if (!navigator.geolocation) {
@@ -264,7 +244,7 @@ export default function App() {
           <h1 className="brand" aria-label="TableTrade">
             Table<span>Trade</span>
           </h1>
-          <p className="tag">Pokémon trades here, now — in this shop</p>
+          <p className="tag">Pokémon trades here, now. In this shop.</p>
         </div>
         {activePing ? <span className="pill ok">Ping</span> : <span className="pill">{settings.displayName}</span>}
       </header>
@@ -298,8 +278,6 @@ export default function App() {
             checkedIn={checkedIn}
             here={here}
             hintStatus={hintStatus}
-            tableOn={tableOn}
-            joinCode={joinCode}
             brokerStatus={brokerStatus}
             matches={matches}
             liveCount={livePeersNote}
@@ -307,22 +285,7 @@ export default function App() {
             onCheckIn={checkIn}
             onLeaveShop={leaveShop}
             onHint={requestShopHint}
-            onTable={(on) => {
-              setTableOn(on);
-              if (on) setLive(true);
-              else if (!checkedInRef.current) setLive(false);
-            }}
-            onJoinCode={setJoinCode}
-            onJoin={() => {
-              const code = normalizeTableCode(joinCode);
-              if (code.length < 4) return;
-              remember({ ...settings, tableCode: code });
-              setTableOn(true);
-              setLive(true);
-            }}
             onDemo={fireDemo}
-            onShowQr={() => setShowQr(true)}
-            onScan={() => setShowScan(true)}
             onOpenPing={setActivePing}
           />
         )}
@@ -358,22 +321,6 @@ export default function App() {
         />
       )}
       {activePing && <PingSheet match={activePing} onClose={() => setActivePing(null)} />}
-      {showQr && settings.tableCode ? <QrSheet code={settings.tableCode} onClose={() => setShowQr(false)} /> : null}
-      {showScan && (
-        <ScanSheet
-          onClose={() => setShowScan(false)}
-          onPresence={(p) => {
-            setShowScan(false);
-            ingestPeer(p, "qr", true);
-          }}
-          onJoin={(code) => {
-            setShowScan(false);
-            remember({ ...settingsRef.current, tableCode: code });
-            setTableOn(true);
-            setLive(true);
-          }}
-        />
-      )}
       {showPhoto ? (
         <ProfilePhotoSheet
           onClose={() => setShowPhoto(false)}
@@ -449,8 +396,6 @@ function NearbyPane({
   checkedIn,
   here,
   hintStatus,
-  tableOn,
-  joinCode,
   brokerStatus,
   matches,
   liveCount,
@@ -458,12 +403,7 @@ function NearbyPane({
   onCheckIn,
   onLeaveShop,
   onHint,
-  onTable,
-  onJoinCode,
-  onJoin,
   onDemo,
-  onShowQr,
-  onScan,
   onOpenPing,
 }: {
   settings: Settings;
@@ -471,8 +411,6 @@ function NearbyPane({
   checkedIn: Shop | null;
   here: { lat: number; lon: number } | null;
   hintStatus: string;
-  tableOn: boolean;
-  joinCode: string;
   brokerStatus: "idle" | "live" | "error";
   matches: TradeMatch[];
   liveCount: number;
@@ -480,38 +418,13 @@ function NearbyPane({
   onCheckIn: (shop: Shop) => void;
   onLeaveShop: () => void;
   onHint: () => void;
-  onTable: (v: boolean) => void;
-  onJoinCode: (v: string) => void;
-  onJoin: () => void;
   onDemo: () => void;
-  onShowQr: () => void;
-  onScan: () => void;
   onOpenPing: (m: TradeMatch) => void;
 }) {
-  const [joinQr, setJoinQr] = useState("");
   const [shopQuery, setShopQuery] = useState("");
   const [namedShop, setNamedShop] = useState("");
-  const tableCode = settings.tableCode;
   const shops = rankShops(here, shopQuery);
   const lastShop = shopById(settings.lastShopId);
-
-  useEffect(() => {
-    if (!tableCode) {
-      setJoinQr("");
-      return;
-    }
-    let cancelled = false;
-    tableJoinToQrDataUrl(pageJoinUrl(tableCode, window.location))
-      .then((url) => {
-        if (!cancelled) setJoinQr(url);
-      })
-      .catch(() => {
-        if (!cancelled) setJoinQr("");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [tableCode]);
 
   return (
     <section>
@@ -626,50 +539,6 @@ function NearbyPane({
         </div>
       )}
 
-      <details className="optional-table">
-        <summary>Table code</summary>
-        <p className="hint">{tableShareHint(tableOn)}</p>
-        <div className="toggle-row">
-          <div>
-            <strong>This table</strong>
-            <p className="hint">A side path. Check-in is the room.</p>
-          </div>
-          <button className={tableOn ? "btn" : "btn secondary"} onClick={() => onTable(!tableOn)}>
-            {tableOn ? "On" : "Off"}
-          </button>
-        </div>
-        {tableCode ? (
-          <p className="code" aria-label={`Table code ${tableCode.split("").join(" ")}`}>
-            {tableCode}
-          </p>
-        ) : null}
-        {joinQr ? (
-          <button className="qr-box qr-tap" type="button" onClick={onShowQr} aria-label="Enlarge table QR">
-            <img src={joinQr} alt={`QR to join table ${tableCode}`} />
-          </button>
-        ) : tableCode ? (
-          <p className="hint">Drawing QR…</p>
-        ) : null}
-        <div>
-          <div className="row">
-            <input
-              className="field"
-              placeholder="Type their table code"
-              aria-label="Type their table code"
-              value={joinCode}
-              onChange={(e) => onJoinCode(e.target.value.toUpperCase())}
-              autoCapitalize="characters"
-            />
-            <button className="btn felt" onClick={onJoin}>
-              Join
-            </button>
-          </div>
-        </div>
-        <button className="btn secondary full" onClick={onScan}>
-          Scan their QR
-        </button>
-      </details>
-
       <details className="advanced">
         <summary>Advanced</summary>
         <p className="hint">
@@ -774,6 +643,23 @@ function YouPane({
         <li>{PRIVACY_PING}</li>
         <li>{PRIVACY_FAN}</li>
       </ul>
+      <p className="hint">
+        A product of {COMPANY}. {BUILT_BY}.
+      </p>
+      <ul className="privacy-lines">
+        <li>
+          <a href={SITE_APP_PAGE}>About TableTrade</a>
+        </li>
+        <li>
+          <a href={SITE_HOME}>{COMPANY}</a>
+        </li>
+        <li>
+          <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>
+        </li>
+        <li>
+          <a href={SITE_PRIVACY}>Privacy</a>
+        </li>
+      </ul>
       <h3 className="panel-title">{INSTALL_HEADING}</h3>
       {installed ? (
         <p className="lede">On your home screen. {INSTALL_NO_ACCOUNT}</p>
@@ -844,125 +730,6 @@ function Face({ name, photo, large }: { name: string; photo?: string; large?: bo
     <span className={`${cls} fallback`} aria-hidden>
       {initialsFromName(name)}
     </span>
-  );
-}
-
-function QrSheet({ code, onClose }: { code: string; onClose: () => void }) {
-  const [url, setUrl] = useState("");
-  const [err, setErr] = useState("");
-  useEffect(() => {
-    tableJoinToQrDataUrl(pageJoinUrl(code, window.location))
-      .then(setUrl)
-      .catch(() => setErr("Could not draw a QR code."));
-  }, [code]);
-  return (
-    <div className="qr-sheet" onClick={onClose}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="grab" />
-        <h2 className="panel-title">This table</h2>
-        <p className="code">{code}</p>
-        <p className="lede">{QR_SHEET_LEDE}</p>
-        <div className="qr-box">{url ? <img src={url} alt={`QR to join table ${code}`} /> : <p className="hint">Drawing…</p>}</div>
-        {err ? <p className="status error">{err}</p> : null}
-        <div className="sheet-actions">
-          <button className="btn secondary full" onClick={onClose}>
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ScanSheet({
-  onClose,
-  onPresence,
-  onJoin,
-}: {
-  onClose: () => void;
-  onPresence: (p: Presence) => void;
-  onJoin: (code: string) => void;
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [err, setErr] = useState("Point at their QR.");
-  const streamRef = useRef<MediaStream | null>(null);
-  const timer = useRef(0);
-  const onPresenceRef = useRef(onPresence);
-  const onJoinRef = useRef(onJoin);
-  onPresenceRef.current = onPresence;
-  onJoinRef.current = onJoin;
-
-  useEffect(() => {
-    let cancelled = false;
-    async function start() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-          audio: false,
-        });
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        streamRef.current = stream;
-        const video = videoRef.current;
-        if (!video) return;
-        video.srcObject = stream;
-        await video.play();
-        if (typeof BarcodeDetector === "undefined") {
-          setErr("This browser can’t scan QR. Use Chrome on Android, or type their table code.");
-          return;
-        }
-        const detector = new BarcodeDetector({ formats: ["qr_code"] });
-        const tick = async () => {
-          if (cancelled || !videoRef.current) return;
-          try {
-            const codes = await detector.detect(videoRef.current);
-            for (const code of codes) {
-              const decoded = decodeTableQr(code.rawValue);
-              if (decoded?.kind === "presence") {
-                onPresenceRef.current(decoded.presence);
-                return;
-              }
-              if (decoded?.kind === "join") {
-                onJoinRef.current(decoded.code);
-                return;
-              }
-            }
-          } catch {
-            /* keep scanning */
-          }
-          timer.current = window.setTimeout(() => void tick(), 350);
-        };
-        void tick();
-      } catch {
-        setErr("Camera permission denied. You can still join with a table code.");
-      }
-    }
-    void start();
-    return () => {
-      cancelled = true;
-      if (timer.current) window.clearTimeout(timer.current);
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-    };
-  }, []);
-
-  return (
-    <div className="qr-sheet" onClick={onClose}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="grab" />
-        <h2 className="panel-title">Scan their QR</h2>
-        <div className="video-wrap">
-          <video ref={videoRef} playsInline muted />
-        </div>
-        <p className="hint">{err}</p>
-        <div className="sheet-actions">
-          <button className="btn secondary full" onClick={onClose}>
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 

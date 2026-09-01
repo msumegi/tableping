@@ -256,6 +256,10 @@ img {
   margin-top: 6px;
 }
 
+.privacy-lines a {
+  color: var(--lamp, #f6cf96);
+}
+
 .fab-row {
   margin-top: 16px;
   display: flex;

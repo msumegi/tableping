@@ -8,7 +8,7 @@ If you and someone else at the same card shop are both using TableTrade, you get
 - they have a card you want, or
 - both.
 
-This is **not** a city-wide dating-radius app. Two people **check in to the same shop** (tap **I’m here**). Matches in that shop ping, with a name and photo so you can find them in the room. GPS may hint which shop to offer. It does not decide you are in the room. A table code / QR can stay as an optional side path. There is no meetup scheduler.
+This is **not** a city-wide dating-radius app. Two people **check in to the same shop** (tap **I’m here**). Matches in that shop ping, with a name and photo so you can find them in the room. GPS may hint which shop to offer. It does not decide you are in the room. There is no table code, no QR join, and no meetup scheduler.
 
 Pokémon only. No Magic. No One Piece.
 
@@ -64,8 +64,6 @@ That’s the whole v1 loop: lists, add a card (type or scan), nearby/demo ping.
 
 Binder-page photos are not in this version (sleeves and glare make a whole page unreliable). Search-to-add is still there: typing `pik` still shows Pikachu, and `umbreon evolving skies` matches the set too.
 
-Camera can still scan an optional table QR if someone uses that side path.
-
 ---
 
 ## Two people at the same shop
@@ -78,8 +76,6 @@ Do this when you are actually in the same room. City-wide matching is out of sco
 2. Both open **Nearby**, pick the shop — location can hint it — and tap **I’m here**
 3. If the lists overlap, both phones fire
 4. Find them by name and photo. Then you talk.
-
-**Optional table code / QR:** still under **Table code** on Nearby. It is not the first thing on that screen.
 
 If you are testing alone, you do not need a second phone: use **See a demo ping now**.
 
@@ -129,7 +125,6 @@ npm run preview
 | Lists | `localStorage` on the device | No account |
 | Demo ping | Local complementary trainer named Kai | One tester can see a ping |
 | Same-shop check-in | Named shop id over a public MQTT demo broker | Automatic ping when two phones tap I’m here at the same shop |
-| Optional table QR | Join URL / have-want payload | Side path. Not the first thing on Nearby |
 
 Live nearby uses HiveMQ’s **public** MQTT broker as a v1 convenience so there is no server to host and **no secrets to commit**. Treat it as a demo radio, not a private backend. Names, photos, and card ids of people who tap **I’m here** can be seen on that channel. Leave the shop when you walk out.
 

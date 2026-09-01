@@ -5,10 +5,12 @@ import { describe, expect, it } from "vitest";
 import {
   CHECKIN_CTA,
   checkInHint,
+  COMPANY,
   HAVE_FIRST_RUN_BODY,
   HAVE_FIRST_RUN_PRIVACY,
   HAVE_FIRST_RUN_TITLE,
   HAVE_LEDE,
+  HELP_MAIL,
   INSTALL_ANDROID,
   INSTALL_IPHONE,
   INSTALL_NO_ACCOUNT,
@@ -18,7 +20,8 @@ import {
   PRIVACY_FAN,
   PRIVACY_LISTS,
   PRIVACY_PING,
-  tableShareHint,
+  SITE_APP_PAGE,
+  SITE_HOME,
   WANT_LEDE,
   YOU_LEDE,
   YOU_WHAT,
@@ -66,9 +69,9 @@ describe("join and first-run copy", () => {
     expect(locationHintCopy()).not.toMatch(/break GPS|basements often/i);
   });
 
-  it("demotes table code to a side path", () => {
-    expect(tableShareHint(false)).toMatch(/if you want one/i);
-    expect(tableShareHint(true)).toMatch(/side path/i);
+  it("does not offer a table code or QR", () => {
+    expect(copySrc).not.toMatch(/table code|QR/i);
+    expect(app).not.toMatch(/Table code|Scan their QR|optional-table/);
   });
 
   it("echoes the site FAQ for install and account", () => {
@@ -90,6 +93,16 @@ describe("join and first-run copy", () => {
     expect(PRIVACY_FAN).toBe("TableTrade is an unofficial fan tool.");
   });
 
+  it("points You at the company site", () => {
+    expect(COMPANY).toBe("Range Road Technologies");
+    expect(HELP_MAIL).toBe("help@rangeroadtech.com");
+    expect(SITE_HOME).toBe("https://rangeroadtech.com/");
+    expect(SITE_APP_PAGE).toContain("rangeroadtech.com/apps/tabletrade");
+    expect(app).toContain("SITE_HOME");
+    expect(app).toContain("HELP_MAIL");
+    expect(app).toContain("BUILT_BY");
+  });
+
   it("keeps player-facing copy free of Tinder and we-don’t-do lists", () => {
     const surface = `${copySrc}\n${app}`;
     expect(surface).not.toMatch(/Tinder/i);
@@ -102,12 +115,10 @@ describe("join and first-run copy", () => {
 });
 
 describe("Nearby leads with check-in", () => {
-  it("heroes I’m here before table code or QR", () => {
+  it("heroes I’m here and has no table join", () => {
     const nearby = app.slice(app.indexOf("function NearbyPane"));
-    const checkIn = nearby.search(/Check in|I’m here|CHECKIN_CTA/);
-    const table = nearby.search(/optional-table|This table|Type their table code/);
-    expect(checkIn).toBeGreaterThan(-1);
-    expect(table).toBeGreaterThan(checkIn);
+    expect(nearby.search(/Check in|I’m here|CHECKIN_CTA/)).toBeGreaterThan(-1);
+    expect(nearby).not.toMatch(/optional-table|This table|Type their table code/);
     expect(app).toMatch(/getCurrentPosition/);
     expect(app).not.toMatch(/watchPosition/);
   });

@@ -1,5 +1,4 @@
 import type { Card, Settings } from "../types";
-import { randomTableCode } from "./tableCode";
 
 const HAVE = "tableping.have.v1";
 const WANT = "tableping.want.v1";
@@ -45,7 +44,7 @@ export function loadSettings(): Settings {
     displayName: stored?.displayName?.trim() || "Trainer",
     userId: stored?.userId || newUserId(),
     demoMode: Boolean(stored?.demoMode),
-    tableCode: stored?.tableCode || randomTableCode(),
+    tableCode: stored?.tableCode || "",
     photo: stored?.photo,
     lastShopId: stored?.lastShopId,
   };

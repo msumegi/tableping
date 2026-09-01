@@ -38,7 +38,7 @@ describe("profile vs card-scan camera facing", () => {
     expect(facingLabelMatches("Back Camera", "user")).toBe(false);
   });
 
-  it("profile photo opens the selfie camera; card scan and QR stay rear", () => {
+  it("profile photo opens the selfie camera; card scan stays rear", () => {
     const app = readFileSync(join(root, "src/App.tsx"), "utf8");
     const profile = readFileSync(join(root, "src/ProfilePhotoSheet.tsx"), "utf8");
     const add = readFileSync(join(root, "src/AddCardSheet.tsx"), "utf8");
@@ -52,7 +52,6 @@ describe("profile vs card-scan camera facing", () => {
 
     expect(add).toMatch(/facingMode: \{ ideal: "environment" \}/);
     expect(loop).toMatch(/facingMode: \{ ideal: "environment" \}/);
-    expect(app).toMatch(/facingMode: "environment"/);
     expect(add).not.toMatch(/ideal: "user"/);
     expect(loop).not.toMatch(/ideal: "user"/);
   });

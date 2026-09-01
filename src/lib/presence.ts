@@ -30,7 +30,7 @@ export type PresenceHub = {
 
 /**
  * Live presence for two phones checked into the same shop.
- * Shop topics are the room. Optional table codes stay as a side channel.
+ * Shop topics are the room. Table codes are gone.
  * The HiveMQ public broker is a v1 convenience — not a private production backend.
  */
 export async function connectPresenceHub(onMessage: Handler): Promise<PresenceHub> {
