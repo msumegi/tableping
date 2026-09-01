@@ -1,0 +1,45 @@
+name: Play bundle
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  aab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx cap sync android
+      - name: Decode upload key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.TABLETRADE_KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/upload-keystore.jks"
+      - name: Build Play bundle
+        env:
+          TABLETRADE_KEYSTORE: ${{ github.workspace }}/upload-keystore.jks
+          TABLETRADE_KEYSTORE_PASSWORD: ${{ secrets.TABLETRADE_KEYSTORE_PASSWORD }}
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew bundleRelease --no-daemon
+      - name: Drop the keystore from the runner
+        if: always()
+        run: rm -f "$GITHUB_WORKSPACE/upload-keystore.jks"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tabletrade-play-bundle
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error

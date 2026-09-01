@@ -11,3 +11,5 @@ coverage
 *.tsbuildinfo
 .vscode
 .idea
+*.jks
+*.keystore

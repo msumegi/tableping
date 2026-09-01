@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TableTrade</string>
+    <string name="title_activity_main">TableTrade</string>
+    <string name="package_name">com.rangeroadtech.tabletrade</string>
+    <string name="custom_url_scheme">com.rangeroadtech.tabletrade</string>
+</resources>
