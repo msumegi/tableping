@@ -1,14 +1,14 @@
 # TableTrade
 
-Pokémon Trading Card Game have-lists, want-lists, and **in-the-room trade pings**.
+Pokémon Trading Card Game have-lists, want-lists, and **close-by trade pings**.
 
-If you and someone else at the same card shop are both using TableTrade, you get a ping when:
+If you and someone else close by are both using TableTrade, you get a ping when:
 
 - they want a card you have, or
 - they have a card you want, or
 - both.
 
-This is **not** a city-wide dating-radius app. Two people **check in to the same shop** (tap **I’m here**). Matches in that shop ping, with a name and photo so you can find them in the room. GPS may hint which shop to offer. It does not decide you are in the room. There is no table code, no QR join, and no meetup scheduler.
+Two people **tap I’m looking**. Matches close by ping, with a name, photo, and an optional I’m over here line so you can find them in the room. There is no shop list, no table code, no QR join, and no meetup scheduler.
 
 Pokémon only. No Magic. No One Piece.
 
@@ -28,7 +28,7 @@ After this repo is on GitHub and Pages is on, open:
 
 **https://msumegi.github.io/tableping/**
 
-**TableTrade** marketing / landing page (share this with shops and friends):
+**TableTrade** marketing / landing page:
 
 **https://msumegi.github.io/tableping/welcome/**
 
@@ -66,16 +66,17 @@ Binder-page photos are not in this version (sleeves and glare make a whole page 
 
 ---
 
-## Two people at the same shop
+## Two people close by
 
-Do this when you are actually in the same room. City-wide matching is out of scope.
+Do this when you are actually near each other. This is not a city-wide radar.
 
 **Check in (the v1 path):**
 
 1. Both people add have/want cards and a display name (a photo helps)
-2. Both open **Nearby**, pick the shop — location can hint it — and tap **I’m here**
-3. If the lists overlap, both phones fire
-4. Find them by name and photo. Then you talk.
+2. Both open **Nearby** and tap **I’m looking**
+3. Optional: type **I’m over here** (red hoodie, back table)
+4. If the lists overlap and the phones are close, both phones fire
+5. Find them by name, photo, and that line. Then you talk.
 
 If you are testing alone, you do not need a second phone: use **See a demo ping now**.
 
@@ -124,9 +125,9 @@ npm run preview
 | Card scan | One-card camera loop + on-device OCR, then the same catalog search | Log 20–200 cards without retyping names; confirm before add |
 | Lists | `localStorage` on the device | No account |
 | Demo ping | Local complementary trainer named Kai | One tester can see a ping |
-| Same-shop check-in | Named shop id over a public MQTT demo broker | Automatic ping when two phones tap I’m here at the same shop |
+| Close-by check-in | Location over a public MQTT demo broker | Automatic ping when two phones tap I’m looking and are close |
 
-Live nearby uses HiveMQ’s **public** MQTT broker as a v1 convenience so there is no server to host and **no secrets to commit**. Treat it as a demo radio, not a private backend. Names, photos, and card ids of people who tap **I’m here** can be seen on that channel. Leave the shop when you walk out.
+Live nearby uses HiveMQ’s **public** MQTT broker as a v1 convenience so there is no server to host and **no secrets to commit**. Treat it as a demo radio, not a private backend. Names, photos, and card ids of people who tap **I’m looking** can be seen on that channel. Tap **Done looking** when you walk out.
 
 ---
 

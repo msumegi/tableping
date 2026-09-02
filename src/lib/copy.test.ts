@@ -11,6 +11,7 @@ import {
   HAVE_FIRST_RUN_TITLE,
   HAVE_LEDE,
   HELP_MAIL,
+  HERE_NOTE_LABEL,
   INSTALL_ANDROID,
   INSTALL_IPHONE,
   INSTALL_NO_ACCOUNT,
@@ -36,36 +37,35 @@ describe("check-in hint", () => {
     expect(checkInHint(false)).toBe("Your phone stays quiet. The app is off.");
   });
 
-  it("names the shop after check-in", () => {
-    expect(checkInHint(true, "Wizard’s Loft")).toBe("You’re at Wizard’s Loft. Matches here will ping.");
-    expect(checkInHint(true)).toBe("You’re here. Matches in this shop will ping.");
+  it("says you are looking after check-in", () => {
+    expect(checkInHint(true)).toBe("You’re looking. Matches close by will ping.");
   });
 });
 
 describe("join and first-run copy", () => {
-  it("echoes the site how-it-works on empty Have, with check-in as the room", () => {
+  it("echoes the site how-it-works on empty Have, with looking as the join", () => {
     const text = `${HAVE_FIRST_RUN_TITLE} ${HAVE_FIRST_RUN_BODY} ${HAVE_FIRST_RUN_PRIVACY}`;
-    expect(HAVE_FIRST_RUN_TITLE).toBe("Here. This room. This shop.");
-    expect(HAVE_FIRST_RUN_BODY).toMatch(/Check in when you get here/);
+    expect(HAVE_FIRST_RUN_TITLE).toBe("Here. Close by.");
+    expect(HAVE_FIRST_RUN_BODY).toMatch(/I’m looking/);
     expect(HAVE_FIRST_RUN_BODY).toMatch(/lists overlap/);
     expect(HAVE_FIRST_RUN_BODY).toMatch(/Then you talk/);
     expect(HAVE_FIRST_RUN_PRIVACY).toBe("Lists live on the phone. No password.");
-    expect(text.split(/\s+/).length).toBeLessThan(70);
+    expect(text.split(/\s+/).length).toBeLessThan(80);
   });
 
-  it("treats shop check-in as the real join", () => {
-    expect(NEARBY_LEDE).toMatch(/Check in/);
+  it("treats I’m looking as the real join", () => {
+    expect(NEARBY_LEDE).toMatch(/I’m looking/);
     expect(NEARBY_LEDE).toMatch(/buzzes you|ping/i);
-    expect(NEARBY_LEDE).toMatch(/Name and photo/);
+    expect(NEARBY_LEDE).toMatch(/Name, photo/);
     expect(NEARBY_LEDE).not.toMatch(/table code|QR/);
-    expect(CHECKIN_CTA).toBe("I’m here");
-    expect(PING_HERE).toBe("is here");
+    expect(CHECKIN_CTA).toBe("I’m looking");
+    expect(PING_HERE).toBe("is close by");
+    expect(HERE_NOTE_LABEL).toBe("I’m over here");
   });
 
-  it("keeps location as a hint, not the room", () => {
-    expect(locationHintCopy()).toMatch(/hint the shop/i);
-    expect(locationHintCopy()).toMatch(/I’m here/);
-    expect(locationHintCopy()).not.toMatch(/120/);
+  it("uses location for close-by, not a shop list", () => {
+    expect(locationHintCopy()).toMatch(/close/i);
+    expect(locationHintCopy()).not.toMatch(/hint the shop/i);
     expect(locationHintCopy()).not.toMatch(/break GPS|basements often/i);
   });
 
@@ -87,9 +87,9 @@ describe("join and first-run copy", () => {
     expect(HAVE_LEDE).toBe("Cards you’d trade here, now.");
     expect(WANT_LEDE).toBe("What you’re hunting.");
     expect(YOU_LEDE).toBe("Lists live on the phone. No password.");
-    expect(YOU_WHAT).toBe("Pokémon in this shop. Match here, then talk.");
+    expect(YOU_WHAT).toBe("Pokémon trades close by. Match, then talk.");
     expect(PRIVACY_LISTS).toMatch(/live on the device/);
-    expect(PRIVACY_PING).toBe("A ping when someone in this shop is a match.");
+    expect(PRIVACY_PING).toBe("A ping when someone close by is a match.");
     expect(PRIVACY_FAN).toBe("TableTrade is an unofficial fan tool.");
   });
 
@@ -114,12 +114,13 @@ describe("join and first-run copy", () => {
   });
 });
 
-describe("Nearby leads with check-in", () => {
-  it("heroes I’m here and has no table join", () => {
+describe("Nearby leads with I’m looking", () => {
+  it("heroes I’m looking and has no shop list or table join", () => {
     const nearby = app.slice(app.indexOf("function NearbyPane"));
-    expect(nearby.search(/Check in|I’m here|CHECKIN_CTA/)).toBeGreaterThan(-1);
+    expect(nearby.search(/I’m looking|CHECKIN_CTA|onStartLooking/)).toBeGreaterThan(-1);
     expect(nearby).not.toMatch(/optional-table|This table|Type their table code/);
+    expect(nearby).not.toMatch(/Search shops|Hint the shop|This shop’s name/);
     expect(app).toMatch(/getCurrentPosition/);
-    expect(app).not.toMatch(/watchPosition/);
+    expect(app).toMatch(/watchPosition/);
   });
 });

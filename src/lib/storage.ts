@@ -47,6 +47,7 @@ export function loadSettings(): Settings {
     tableCode: stored?.tableCode || "",
     photo: stored?.photo,
     lastShopId: stored?.lastShopId,
+    lookingNote: typeof stored?.lookingNote === "string" ? stored.lookingNote.slice(0, 40) : "",
   };
 }
 

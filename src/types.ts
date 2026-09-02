@@ -18,6 +18,7 @@ export type Presence = {
   have: Card[];
   want: Card[];
   photo?: string;
+  note?: string;
   geohash?: string;
   lat?: number;
   lon?: number;
@@ -45,4 +46,5 @@ export type Settings = {
   tableCode: string;
   photo?: string;
   lastShopId?: string;
+  lookingNote?: string;
 };

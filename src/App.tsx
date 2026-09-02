@@ -21,11 +21,14 @@ import {
   HAVE_FIRST_RUN_PRIVACY,
   HAVE_FIRST_RUN_TITLE,
   HAVE_LEDE,
+  HERE_NOTE_HINT,
+  HERE_NOTE_LABEL,
+  HERE_NOTE_MAX,
   INSTALL_ANDROID,
   INSTALL_HEADING,
   INSTALL_IPHONE,
   INSTALL_NO_ACCOUNT,
-  LEAVE_SHOP,
+  LEAVE_LOOKING,
   locationHintCopy,
   NEARBY_LEDE,
   PING_HERE,
@@ -44,17 +47,11 @@ import {
   YOU_WHAT,
 } from "./lib/copy";
 import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
-import { presenceMatchSource } from "./lib/checkin";
+import { presenceDistanceM, presenceMatchSource } from "./lib/checkin";
+import { encodeGeohash } from "./lib/geo";
 import { kindLabel, matchAgainst, sourceLabel } from "./lib/match";
 import { compressProfilePhoto, initialsFromName } from "./lib/photo";
 import { connectLocalHub, connectPresenceHub, HEARTBEAT_MS, PRESENCE_TTL_MS } from "./lib/presence";
-import {
-  formatShopDistance,
-  rankShops,
-  resolveShopInput,
-  shopById,
-  type Shop,
-} from "./lib/shops";
 
 const TABS: { id: Tab; ico: string; lbl: string }[] = [
   { id: "have", ico: "▣", lbl: "Have" },
@@ -70,7 +67,7 @@ export default function App() {
   const [want, setWant] = useState<Card[]>(() => loadWant());
   const [addingFor, setAddingFor] = useState<"have" | "want" | null>(null);
   const [live, setLive] = useState(false);
-  const [checkedIn, setCheckedIn] = useState<Shop | null>(null);
+  const [looking, setLooking] = useState(false);
   const [here, setHere] = useState<{ lat: number; lon: number } | null>(null);
   const [hintStatus, setHintStatus] = useState("");
   const [brokerStatus, setBrokerStatus] = useState<"idle" | "live" | "error">("idle");
@@ -82,32 +79,66 @@ export default function App() {
   const haveRef = useRef(have);
   const wantRef = useRef(want);
   const settingsRef = useRef(settings);
-  const checkedInRef = useRef(checkedIn);
+  const hereRef = useRef(here);
+  const watchRef = useRef<number | null>(null);
   const seenRef = useRef<Set<string>>(new Set(loadSeenMatchIds()));
 
   haveRef.current = have;
   wantRef.current = want;
   settingsRef.current = settings;
-  checkedInRef.current = checkedIn;
+  hereRef.current = here;
 
   useEffect(() => saveHave(have), [have]);
   useEffect(() => saveWant(want), [want]);
   useEffect(() => saveSettings(settings), [settings]);
+  useEffect(() => {
+    return () => {
+      if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current);
+    };
+  }, []);
 
   function remember(next: Settings) {
     setSettings(next);
   }
 
-  function checkIn(shop: Shop) {
-    setCheckedIn(shop);
-    remember({ ...settingsRef.current, lastShopId: shop.id });
-    setLive(true);
-    setTab("nearby");
+  function startLooking() {
+    if (!navigator.geolocation) {
+      setHintStatus("This phone cannot share location.");
+      return;
+    }
+    setHintStatus("Finding where you are…");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setHere({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        setLooking(true);
+        setLive(true);
+        setHintStatus("");
+        setTab("nearby");
+        if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current);
+        watchRef.current = navigator.geolocation.watchPosition(
+          (next) => {
+            setHere({ lat: next.coords.latitude, lon: next.coords.longitude });
+          },
+          () => {
+            /* keep the last fix */
+          },
+          { enableHighAccuracy: true, maximumAge: 10_000, timeout: 15_000 },
+        );
+      },
+      (err) => {
+        setHintStatus(err.message || "Location permission denied.");
+      },
+      { enableHighAccuracy: true, maximumAge: 10_000, timeout: 15_000 },
+    );
   }
 
-  function leaveShop() {
-    setCheckedIn(null);
+  function stopLooking() {
+    setLooking(false);
     setLive(false);
+    if (watchRef.current != null) {
+      navigator.geolocation.clearWatch(watchRef.current);
+      watchRef.current = null;
+    }
   }
 
   function addCard(list: "have" | "want", card: Card, keepSheet = false) {
@@ -117,13 +148,13 @@ export default function App() {
     setTab(list);
   }
 
-  function ingestPeer(peer: Presence, source: MatchSource, force = false) {
+  function ingestPeer(peer: Presence, source: MatchSource, force = false, distanceM?: number) {
     if (peer.ts === 0) return;
-    if (!force && source === "gps") return;
     const match = matchAgainst(
       { userId: settingsRef.current.userId, have: haveRef.current, want: wantRef.current },
       peer,
       source,
+      distanceM,
     );
     if (!match) return;
     if (!force && seenRef.current.has(match.id)) return;
@@ -146,10 +177,10 @@ export default function App() {
       setSeedNote("");
     }
     remember({ ...settingsRef.current, demoMode: true });
-    const shop = checkedInRef.current;
     const demo = complementaryDemoPresence(haveRef.current, wantRef.current, {
-      shopId: shop?.id,
-      shopName: shop?.name,
+      note: settingsRef.current.lookingNote?.trim() || "Red hoodie. Back table.",
+      lat: hereRef.current?.lat,
+      lon: hereRef.current?.lon,
     });
     ingestPeer(demo, "demo", true);
     setTab("nearby");
@@ -159,11 +190,12 @@ export default function App() {
     if (!live) return;
     const classify = (p: Presence) =>
       presenceMatchSource(p, {
-        shopId: checkedInRef.current?.id,
+        lat: hereRef.current?.lat,
+        lon: hereRef.current?.lon,
       });
     const local = connectLocalHub((p) => {
       const source = classify(p);
-      if (source) ingestPeer(p, source);
+      if (source) ingestPeer(p, source, false, presenceDistanceM(p, hereRef.current ?? {}));
     });
     let remote: Awaited<ReturnType<typeof connectPresenceHub>> | null = null;
     let cancelled = false;
@@ -172,7 +204,7 @@ export default function App() {
       try {
         const hub = await connectPresenceHub((p) => {
           const source = classify(p);
-          if (source) ingestPeer(p, source);
+          if (source) ingestPeer(p, source, false, presenceDistanceM(p, hereRef.current ?? {}));
         });
         if (cancelled) {
           hub.disconnect();
@@ -186,15 +218,18 @@ export default function App() {
     })();
 
     const beat = () => {
-      const shop = checkedInRef.current;
+      const spot = hereRef.current;
+      if (!spot) return;
       const presence: Presence = {
         userId: settingsRef.current.userId,
         name: settingsRef.current.displayName,
         photo: settingsRef.current.photo,
+        note: settingsRef.current.lookingNote?.trim() || undefined,
         have: haveRef.current,
         want: wantRef.current,
-        shopId: shop?.id,
-        shopName: shop?.name,
+        lat: spot.lat,
+        lon: spot.lon,
+        geohash: encodeGeohash(spot.lat, spot.lon),
         ts: Date.now(),
       };
       local.publish(presence);
@@ -206,31 +241,14 @@ export default function App() {
     return () => {
       cancelled = true;
       window.clearInterval(id);
+      const spot = hereRef.current;
       remote?.leave(settingsRef.current.userId, {
-        shopId: checkedInRef.current?.id,
+        geohash: spot ? encodeGeohash(spot.lat, spot.lon) : undefined,
       });
       remote?.disconnect();
       local.disconnect();
     };
-  }, [live, checkedIn?.id, settings.userId, settings.displayName, settings.photo]);
-
-  function requestShopHint() {
-    if (!navigator.geolocation) {
-      setHintStatus("This phone can’t hint a shop.");
-      return;
-    }
-    setHintStatus("Looking for a shop…");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setHere({ lat: pos.coords.latitude, lon: pos.coords.longitude });
-        setHintStatus("");
-      },
-      (err) => {
-        setHintStatus(err.message || "Location permission denied.");
-      },
-      { enableHighAccuracy: true, maximumAge: 30_000, timeout: 12_000 },
-    );
-  }
+  }, [live, settings.userId, settings.displayName, settings.photo, settings.lookingNote]);
 
   const livePeersNote = useMemo(() => {
     const fresh = matches.filter((m) => Date.now() - m.at < PRESENCE_TTL_MS * 2);
@@ -244,7 +262,7 @@ export default function App() {
           <h1 className="brand" aria-label="TableTrade">
             Table<span>Trade</span>
           </h1>
-          <p className="tag">Pokémon trades here, now. In this shop.</p>
+          <p className="tag">Pokémon trades here, now. Close by.</p>
         </div>
         {activePing ? <span className="pill ok">Ping</span> : <span className="pill">{settings.displayName}</span>}
       </header>
@@ -275,16 +293,15 @@ export default function App() {
           <NearbyPane
             settings={settings}
             live={live}
-            checkedIn={checkedIn}
-            here={here}
+            looking={looking}
             hintStatus={hintStatus}
             brokerStatus={brokerStatus}
             matches={matches}
             liveCount={livePeersNote}
             seedNote={seedNote}
-            onCheckIn={checkIn}
-            onLeaveShop={leaveShop}
-            onHint={requestShopHint}
+            onLookingNote={(lookingNote) => remember({ ...settings, lookingNote })}
+            onStartLooking={startLooking}
+            onStopLooking={stopLooking}
             onDemo={fireDemo}
             onOpenPing={setActivePing}
           />
@@ -294,6 +311,7 @@ export default function App() {
             settings={settings}
             installed={isStandalonePwa()}
             onName={(displayName) => remember({ ...settings, displayName })}
+            onLookingNote={(lookingNote) => remember({ ...settings, lookingNote })}
             onOpenPhoto={() => setShowPhoto(true)}
             onClearPhoto={() => remember({ ...settings, photo: undefined })}
             onDemoMode={(demoMode) => remember({ ...settings, demoMode })}
@@ -393,39 +411,32 @@ function ListPane({
 function NearbyPane({
   settings,
   live,
-  checkedIn,
-  here,
+  looking,
   hintStatus,
   brokerStatus,
   matches,
   liveCount,
   seedNote,
-  onCheckIn,
-  onLeaveShop,
-  onHint,
+  onLookingNote,
+  onStartLooking,
+  onStopLooking,
   onDemo,
   onOpenPing,
 }: {
   settings: Settings;
   live: boolean;
-  checkedIn: Shop | null;
-  here: { lat: number; lon: number } | null;
+  looking: boolean;
   hintStatus: string;
   brokerStatus: "idle" | "live" | "error";
   matches: TradeMatch[];
   liveCount: number;
   seedNote: string;
-  onCheckIn: (shop: Shop) => void;
-  onLeaveShop: () => void;
-  onHint: () => void;
+  onLookingNote: (note: string) => void;
+  onStartLooking: () => void;
+  onStopLooking: () => void;
   onDemo: () => void;
   onOpenPing: (m: TradeMatch) => void;
 }) {
-  const [shopQuery, setShopQuery] = useState("");
-  const [namedShop, setNamedShop] = useState("");
-  const shops = rankShops(here, shopQuery);
-  const lastShop = shopById(settings.lastShopId);
-
   return (
     <section>
       <div className="nearby-hero">
@@ -439,18 +450,29 @@ function NearbyPane({
       </div>
 
       <div className="you-card stack checkin-card">
-        {checkedIn ? (
+        {looking ? (
           <>
             <div className="toggle-row">
               <div>
-                <strong>{checkedIn.name}</strong>
-                <p className="hint">{checkedIn.city === "This shop" ? "You’re here." : checkedIn.city}</p>
+                <strong>You’re looking</strong>
+                <p className="hint">{checkInHint(true)}</p>
               </div>
-              <button className="btn secondary" onClick={onLeaveShop}>
-                {LEAVE_SHOP}
+              <button className="btn secondary" onClick={onStopLooking}>
+                {LEAVE_LOOKING}
               </button>
             </div>
-            <p className="hint">{checkInHint(true, checkedIn.name)}</p>
+            <label className="hint" htmlFor="here-note">
+              {HERE_NOTE_LABEL}
+            </label>
+            <input
+              id="here-note"
+              className="field"
+              maxLength={HERE_NOTE_MAX}
+              placeholder={HERE_NOTE_HINT}
+              value={settings.lookingNote ?? ""}
+              onChange={(e) => onLookingNote(e.target.value.slice(0, HERE_NOTE_MAX))}
+            />
+            <p className="hint">{HERE_NOTE_HINT}</p>
             {!settings.photo ? <p className="hint">{YOU_PHOTO_HINT} Add one on You.</p> : null}
           </>
         ) : (
@@ -459,55 +481,11 @@ function NearbyPane({
               <strong>Check in</strong>
               <p className="hint">{checkInHint(false)}</p>
             </div>
-            {shops.some((s) => s.hinted) ? (
-              shops
-                .filter((s) => s.hinted)
-                .map((shop) => (
-                  <ShopRow key={shop.id} shop={shop} primary onCheckIn={onCheckIn} />
-                ))
-            ) : lastShop && !shopQuery ? (
-              <ShopRow shop={{ ...lastShop, hinted: false }} primary onCheckIn={onCheckIn} />
-            ) : null}
             <p className="hint">{locationHintCopy()}</p>
-            <button className="btn secondary full" onClick={onHint}>
-              Hint the shop
+            <button className="btn ember full" onClick={onStartLooking}>
+              {CHECKIN_CTA}
             </button>
             {hintStatus ? <p className="hint">{hintStatus}</p> : null}
-            <input
-              className="field"
-              placeholder="Search shops"
-              aria-label="Search shops"
-              value={shopQuery}
-              onChange={(e) => setShopQuery(e.target.value)}
-            />
-            <div className="shop-list">
-              {shops
-                .filter((s) => !s.hinted)
-                .map((shop) => (
-                  <ShopRow key={shop.id} shop={shop} onCheckIn={onCheckIn} />
-                ))}
-            </div>
-            <div>
-              <div className="row">
-                <input
-                  className="field"
-                  placeholder="This shop’s name"
-                  aria-label="This shop’s name"
-                  value={namedShop}
-                  onChange={(e) => setNamedShop(e.target.value)}
-                />
-                <button
-                  className="btn felt"
-                  onClick={() => {
-                    const shop = resolveShopInput(namedShop);
-                    if (shop) onCheckIn(shop);
-                  }}
-                >
-                  {CHECKIN_CTA}
-                </button>
-              </div>
-              <p className="hint">Same name, same shop. That is the check-in.</p>
-            </div>
           </>
         )}
       </div>
@@ -534,6 +512,7 @@ function NearbyPane({
                 <span className="badge">{sourceLabel(m.source)}</span>
               </header>
               <div className="hint">{kindLabel(m.kind)}</div>
+              {m.peer.note ? <div className="hint">{m.peer.note}</div> : null}
             </button>
           ))}
         </div>
@@ -550,37 +529,11 @@ function NearbyPane({
   );
 }
 
-function ShopRow({
-  shop,
-  primary,
-  onCheckIn,
-}: {
-  shop: Shop & { distanceM?: number; hinted?: boolean };
-  primary?: boolean;
-  onCheckIn: (shop: Shop) => void;
-}) {
-  const distance = formatShopDistance(shop.distanceM);
-  return (
-    <div className={`shop-row${shop.hinted ? " hinted" : ""}${primary ? " primary" : ""}`}>
-      <div>
-        <strong>{shop.name}</strong>
-        <p className="hint">
-          {shop.city}
-          {distance ? ` · ${distance}` : ""}
-          {shop.hinted ? " · Here?" : ""}
-        </p>
-      </div>
-      <button className={primary || shop.hinted ? "btn ember" : "btn felt"} onClick={() => onCheckIn(shop)}>
-        {CHECKIN_CTA}
-      </button>
-    </div>
-  );
-}
-
 function YouPane({
   settings,
   installed,
   onName,
+  onLookingNote,
   onOpenPhoto,
   onClearPhoto,
   onDemoMode,
@@ -589,6 +542,7 @@ function YouPane({
   settings: Settings;
   installed: boolean;
   onName: (name: string) => void;
+  onLookingNote: (note: string) => void;
   onOpenPhoto: () => void;
   onClearPhoto: () => void;
   onDemoMode: (on: boolean) => void;
@@ -609,6 +563,18 @@ function YouPane({
           value={settings.displayName}
           onChange={(e) => onName(e.target.value)}
         />
+        <label className="hint" htmlFor="you-here-note">
+          {HERE_NOTE_LABEL}
+        </label>
+        <input
+          id="you-here-note"
+          className="field"
+          maxLength={HERE_NOTE_MAX}
+          placeholder={HERE_NOTE_HINT}
+          value={settings.lookingNote ?? ""}
+          onChange={(e) => onLookingNote(e.target.value.slice(0, HERE_NOTE_MAX))}
+        />
+        <p className="hint">{HERE_NOTE_HINT}</p>
         <div className="photo-row">
           <Face name={settings.displayName} photo={settings.photo} large />
           <div className="stack" style={{ flex: 1 }}>
@@ -681,7 +647,7 @@ function YouPane({
 function PingSheet({ match, onClose }: { match: TradeMatch; onClose: () => void }) {
   const give = match.youCanGive[0];
   const get = match.youCanGet[0];
-  const place = match.peer.shopName;
+  const note = match.peer.note?.trim();
   return (
     <div className="ping-sheet" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
@@ -691,7 +657,7 @@ function PingSheet({ match, onClose }: { match: TradeMatch; onClose: () => void 
         <h2 className="ping-title">
           {match.peer.name} {PING_HERE}
         </h2>
-        {place ? <p className="hint">{place}</p> : null}
+        {note ? <p className="hint">{note}</p> : null}
         <p className="lede">{kindLabel(match.kind)}</p>
         <div className="match-pair">
           <div>

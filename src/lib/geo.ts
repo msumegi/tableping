@@ -104,5 +104,5 @@ export function haversineMeters(
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
 }
 
-/** Hard cap so we never behave like a city-wide radar. */
-export const MAX_MATCH_METERS = 120;
+/** Hard cap so we never behave like a city-wide radar. Indoor GPS is messy. */
+export const MAX_MATCH_METERS = 200;

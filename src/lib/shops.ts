@@ -18,7 +18,7 @@ export const HINT_METERS = 2000;
 
 /**
  * Named shops for v1 check-in. GPS only ranks and hints.
- * Two people match when they tap I’m here on the same shop id.
+ * Unused catalog. Check-in is close-by location, not these shop ids.
  */
 export const SHOPS: Shop[] = [
   {

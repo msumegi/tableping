@@ -96,10 +96,10 @@ describe("demo trainer", () => {
   });
 });
 
-describe("in-room geo, not city-wide", () => {
-  it("uses shop-scale precision 7 (~76m cells)", () => {
+describe("close-by geo, not city-wide", () => {
+  it("uses shop-scale precision 7 (~76m cells) and a 200m match cap", () => {
     expect(SHOP_PRECISION).toBe(7);
-    expect(MAX_MATCH_METERS).toBeLessThanOrEqual(120);
+    expect(MAX_MATCH_METERS).toBe(200);
   });
 
   it("keeps two shop-door coordinates in the same neighborhood", () => {

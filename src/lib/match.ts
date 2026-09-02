@@ -69,6 +69,6 @@ export function sourceLabel(source: MatchSource): string {
     case "qr":
       return "QR";
     case "gps":
-      return "Here";
+      return "Close by";
   }
 }

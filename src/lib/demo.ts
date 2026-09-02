@@ -11,7 +11,15 @@ export const DEMO_NAME = "Kai (demo)";
 export function complementaryDemoPresence(
   have: Card[],
   want: Card[],
-  extras?: { geohash?: string; room?: string; lat?: number; lon?: number; shopId?: string; shopName?: string },
+  extras?: {
+    geohash?: string;
+    room?: string;
+    lat?: number;
+    lon?: number;
+    note?: string;
+    shopId?: string;
+    shopName?: string;
+  },
 ): Presence {
   const demoHave = want.length ? want : [SAMPLE_CHARIZARD];
   const demoWant = have.length ? have : [SAMPLE_PIKACHU];
@@ -20,6 +28,7 @@ export function complementaryDemoPresence(
     name: DEMO_NAME,
     have: demoHave,
     want: demoWant,
+    note: extras?.note ?? "Red hoodie. Back table.",
     geohash: extras?.geohash,
     lat: extras?.lat,
     lon: extras?.lon,
