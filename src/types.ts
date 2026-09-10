@@ -10,7 +10,7 @@ export type Tab = "have" | "want" | "nearby" | "you";
 
 export type MatchKind = "they_want_yours" | "you_want_theirs" | "both";
 
-export type MatchSource = "shop" | "gps" | "table" | "demo" | "qr";
+export type MatchSource = "shop" | "gps" | "table" | "demo" | "qr" | "ble";
 
 export type Presence = {
   userId: string;

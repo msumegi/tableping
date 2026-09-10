@@ -70,5 +70,7 @@ export function sourceLabel(source: MatchSource): string {
       return "QR";
     case "gps":
       return "Close by";
+    case "ble":
+      return "Close by";
   }
 }

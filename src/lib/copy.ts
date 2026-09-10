@@ -4,7 +4,7 @@ export function checkInHint(on: boolean): string {
 }
 
 export function locationHintCopy(): string {
-  return "Location is only to see who is close. This phone does not keep a history. While you look, about where you are goes to the match radio so another phone can ping.";
+  return "Bluetooth finds who is close in the room. Keep Bluetooth on. This phone does not keep a history.";
 }
 
 export const HAVE_LEDE = "Cards you’d trade here, now.";
@@ -12,7 +12,7 @@ export const HAVE_LEDE = "Cards you’d trade here, now.";
 export const WANT_LEDE = "What you’re hunting.";
 
 export const NEARBY_LEDE =
-  "Tap I’m looking. A match close by buzzes you. Name, photo, and where you are.";
+  "Tap I’m looking. A match close by buzzes you. Name, cards, optional I’m over here.";
 
 export const YOU_LEDE = "Lists live on the phone until you look. No password.";
 
@@ -25,7 +25,7 @@ export const HAVE_FIRST_RUN_TITLE = "Here. Close by.";
 export const HAVE_FIRST_RUN_BODY =
   "Add a few haves and wants. Tap I’m looking when you get here. If the lists overlap and you are close, both phones fire. Then you talk.";
 
-export const HAVE_FIRST_RUN_PRIVACY = "No password. Looking shares name, cards, and about where you are.";
+export const HAVE_FIRST_RUN_PRIVACY = "No password. Looking uses Bluetooth to phones close by.";
 
 export const INSTALL_HEADING = "Add to Home Screen";
 
@@ -36,9 +36,9 @@ export const INSTALL_IPHONE = "iPhone: Safari → Share → Add to Home Screen."
 export const INSTALL_ANDROID = "Android: Chrome menu → Add to Home screen or Install app.";
 
 export const PRIVACY_LISTS =
-  "Lists stay on the phone until you tap I’m looking. Then your name, those cards, and about where you are go to the match radio.";
+  "Lists stay on the phone until you tap I’m looking. Then your name and those cards go over Bluetooth to phones close by.";
 
-export const PRIVACY_PING = "A ping when someone close by is a match. Not this table. About 200 m.";
+export const PRIVACY_PING = "A ping when someone close by is a match. Same room, not across town.";
 
 export const PRIVACY_FAN = "TableTrade is an unofficial fan tool.";
 
@@ -76,7 +76,7 @@ export const AGE_NO = "I’m not";
 
 export const AGE_BLOCKED = "TableTrade is for people 13 or older.";
 
-export const RADIO_DOWN = "Can’t match people on this build yet. Lists and scan still work.";
+export const RADIO_DOWN = "Looking needs Bluetooth on this phone.";
 
 export const HEAR_AGAIN = "Hear pings again";
 

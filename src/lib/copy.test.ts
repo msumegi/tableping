@@ -49,14 +49,14 @@ describe("join and first-run copy", () => {
     expect(HAVE_FIRST_RUN_BODY).toMatch(/I’m looking/);
     expect(HAVE_FIRST_RUN_BODY).toMatch(/lists overlap/);
     expect(HAVE_FIRST_RUN_BODY).toMatch(/Then you talk/);
-    expect(HAVE_FIRST_RUN_PRIVACY).toMatch(/Looking shares/);
+    expect(HAVE_FIRST_RUN_PRIVACY).toMatch(/Bluetooth/);
     expect(text.split(/\s+/).length).toBeLessThan(80);
   });
 
   it("treats I’m looking as the real join", () => {
     expect(NEARBY_LEDE).toMatch(/I’m looking/);
     expect(NEARBY_LEDE).toMatch(/buzzes you|ping/i);
-    expect(NEARBY_LEDE).toMatch(/Name, photo/);
+    expect(NEARBY_LEDE).toMatch(/I’m over here/);
     expect(NEARBY_LEDE).not.toMatch(/table code|QR/);
     expect(CHECKIN_CTA).toBe("I’m looking");
     expect(PING_HERE).toBe("is close by");
@@ -120,7 +120,7 @@ describe("Nearby leads with I’m looking", () => {
     expect(nearby.search(/I’m looking|CHECKIN_CTA|onStartLooking/)).toBeGreaterThan(-1);
     expect(nearby).not.toMatch(/optional-table|This table|Type their table code/);
     expect(nearby).not.toMatch(/Search shops|Hint the shop|This shop’s name/);
-    expect(app).toMatch(/getCurrentPosition/);
-    expect(app).toMatch(/watchPosition/);
+    expect(app).toMatch(/startLooking/);
+    expect(app).toMatch(/canUsePhoneNearby|startPhoneNearby/);
   });
 });

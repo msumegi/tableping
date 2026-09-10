@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Card, MatchSource, Presence, Settings, Tab, TradeMatch } from "./types";
 import { AddCardSheet } from "./AddCardSheet";
 import { ProfilePhotoSheet } from "./ProfilePhotoSheet";
@@ -56,11 +56,10 @@ import {
   MATCH_PRINTING,
 } from "./lib/copy";
 import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
-import { presenceDistanceM, presenceMatchSource } from "./lib/checkin";
-import { encodeGeohash } from "./lib/geo";
 import { kindLabel, matchAgainst, sourceLabel } from "./lib/match";
 import { compressProfilePhoto, initialsFromName } from "./lib/photo";
-import { connectLocalHub, connectPresenceHub, HEARTBEAT_MS, PRESENCE_TTL_MS, mqttBrokerUrl } from "./lib/presence";
+import { connectLocalHub } from "./lib/presence";
+import { canUsePhoneNearby, startPhoneNearby, updatePhoneNearby } from "./lib/bleNearby";
 
 const TABS: { id: Tab; ico: string; lbl: string }[] = [
   { id: "have", ico: "▣", lbl: "Have" },
@@ -77,9 +76,8 @@ export default function App() {
   const [addingFor, setAddingFor] = useState<"have" | "want" | null>(null);
   const [live, setLive] = useState(false);
   const [looking, setLooking] = useState(false);
-  const [here, setHere] = useState<{ lat: number; lon: number } | null>(null);
   const [hintStatus, setHintStatus] = useState("");
-  const [brokerStatus, setBrokerStatus] = useState<"idle" | "live" | "error">("idle");
+  const [brokerStatus] = useState<"idle" | "live" | "error">("idle");
   const [matches, setMatches] = useState<TradeMatch[]>([]);
   const [activePing, setActivePing] = useState<TradeMatch | null>(null);
   const [showPhoto, setShowPhoto] = useState(false);
@@ -90,70 +88,61 @@ export default function App() {
   const haveRef = useRef(have);
   const wantRef = useRef(want);
   const settingsRef = useRef(settings);
-  const hereRef = useRef(here);
-  const watchRef = useRef<number | null>(null);
+  const stopNearbyRef = useRef<null | (() => void)>(null);
   const seenRef = useRef<Set<string>>(new Set(loadSeenMatchIds()));
 
   haveRef.current = have;
   wantRef.current = want;
   settingsRef.current = settings;
-  hereRef.current = here;
 
   useEffect(() => saveHave(have), [have]);
   useEffect(() => saveWant(want), [want]);
   useEffect(() => saveSettings(settings), [settings]);
-  useEffect(() => {
-    return () => {
-      if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current);
+
+  function currentPresence(): Presence {
+    return {
+      userId: settingsRef.current.userId,
+      name: settingsRef.current.displayName,
+      note: settingsRef.current.lookingNote?.trim() || undefined,
+      have: haveRef.current,
+      want: wantRef.current,
+      ts: Date.now(),
     };
-  }, []);
+  }
 
   function remember(next: Settings) {
     setSettings(next);
   }
 
-  function startLooking() {
-    if (!mqttBrokerUrl() && !import.meta.env.DEV) {
-      setHintStatus(RADIO_DOWN);
-      return;
-    }
-    if (!navigator.geolocation) {
-      setHintStatus("This phone cannot share location.");
-      return;
-    }
-    setHintStatus("Finding where you are…");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setHere({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+  async function startLooking() {
+    setHintStatus("Turning looking on…");
+    if (canUsePhoneNearby()) {
+      try {
+        stopNearbyRef.current = await startPhoneNearby(currentPresence(), (peer) => ingestPeer(peer, "ble"));
         setLooking(true);
         setLive(true);
         setHintStatus("");
         setTab("nearby");
-        if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current);
-        watchRef.current = navigator.geolocation.watchPosition(
-          (next) => {
-            setHere({ lat: next.coords.latitude, lon: next.coords.longitude });
-          },
-          () => {
-            /* keep the last fix */
-          },
-          { enableHighAccuracy: true, maximumAge: 10_000, timeout: 15_000 },
-        );
-      },
-      (err) => {
-        setHintStatus(err.message || "Location permission denied.");
-      },
-      { enableHighAccuracy: true, maximumAge: 10_000, timeout: 15_000 },
-    );
+      } catch (err) {
+        setHintStatus(err instanceof Error ? err.message : RADIO_DOWN);
+      }
+      return;
+    }
+    if (import.meta.env.DEV) {
+      setLooking(true);
+      setLive(true);
+      setHintStatus("");
+      setTab("nearby");
+      return;
+    }
+    setHintStatus(RADIO_DOWN);
   }
 
   function stopLooking() {
     setLooking(false);
     setLive(false);
-    if (watchRef.current != null) {
-      navigator.geolocation.clearWatch(watchRef.current);
-      watchRef.current = null;
-    }
+    stopNearbyRef.current?.();
+    stopNearbyRef.current = null;
   }
 
   function addCard(list: "have" | "want", card: Card, keepSheet = false) {
@@ -207,8 +196,6 @@ export default function App() {
     remember({ ...settingsRef.current, demoMode: true });
     const demo = complementaryDemoPresence(haveRef.current, wantRef.current, {
       note: settingsRef.current.lookingNote?.trim() || "Red hoodie. Back table.",
-      lat: hereRef.current?.lat,
-      lon: hereRef.current?.lon,
     });
     ingestPeer(demo, "demo", true);
     setTab("nearby");
@@ -216,72 +203,25 @@ export default function App() {
 
   useEffect(() => {
     if (!live) return;
-    const classify = (p: Presence) =>
-      presenceMatchSource(p, {
-        lat: hereRef.current?.lat,
-        lon: hereRef.current?.lon,
-      });
-    const local = connectLocalHub((p) => {
-      const source = classify(p);
-      if (source) ingestPeer(p, source, false, presenceDistanceM(p, hereRef.current ?? {}));
-    });
-    let remote: Awaited<ReturnType<typeof connectPresenceHub>> | null = null;
-    let cancelled = false;
-
-    void (async () => {
-      try {
-        const hub = await connectPresenceHub((p) => {
-          const source = classify(p);
-          if (source) ingestPeer(p, source, false, presenceDistanceM(p, hereRef.current ?? {}));
-        });
-        if (cancelled) {
-          hub.disconnect();
-          return;
-        }
-        remote = hub;
-        setBrokerStatus("live");
-      } catch {
-        if (!cancelled) setBrokerStatus("error");
-      }
-    })();
-
-    const beat = () => {
-      const spot = hereRef.current;
-      if (!spot) return;
-      const presence: Presence = {
-        userId: settingsRef.current.userId,
-        name: settingsRef.current.displayName,
-        photo: settingsRef.current.photo,
-        note: settingsRef.current.lookingNote?.trim() || undefined,
-        have: haveRef.current,
-        want: wantRef.current,
-        lat: spot.lat,
-        lon: spot.lon,
-        geohash: encodeGeohash(spot.lat, spot.lon),
-        ts: Date.now(),
+    if (canUsePhoneNearby()) {
+      const beat = () => {
+        void updatePhoneNearby(currentPresence());
       };
-      local.publish(presence);
-      remote?.publish(presence);
-    };
-
+      beat();
+      const id = window.setInterval(beat, 12_000);
+      return () => window.clearInterval(id);
+    }
+    const local = connectLocalHub((p) => ingestPeer(p, "ble"));
+    const beat = () => local.publish(currentPresence());
     beat();
-    const id = window.setInterval(beat, HEARTBEAT_MS);
+    const id = window.setInterval(beat, 12_000);
     return () => {
-      cancelled = true;
       window.clearInterval(id);
-      const spot = hereRef.current;
-      remote?.leave(settingsRef.current.userId, {
-        geohash: spot ? encodeGeohash(spot.lat, spot.lon) : undefined,
-      });
-      remote?.disconnect();
       local.disconnect();
     };
-  }, [live, settings.userId, settings.displayName, settings.photo, settings.lookingNote]);
+  }, [live, settings.userId, settings.displayName, settings.lookingNote, have, want]);
 
-  const livePeersNote = useMemo(() => {
-    const fresh = matches.filter((m) => Date.now() - m.at < PRESENCE_TTL_MS * 2);
-    return fresh.length;
-  }, [matches]);
+  const livePeersNote = matches.length;
 
   return (
     <div className="app">
@@ -464,12 +404,9 @@ function ListPane({
 
 function NearbyPane({
   settings,
-  live,
   looking,
   hintStatus,
-  brokerStatus,
   matches,
-  liveCount,
   seedNote,
   onLookingNote,
   onStartLooking,
