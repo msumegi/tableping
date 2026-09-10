@@ -3,7 +3,7 @@ import type { Card, Presence } from "../types";
 import { LOCAL_CARDS } from "./localCatalog";
 
 type NearbyNative = {
-  start(options: { payload: string }): Promise<void>;
+  start(options: { payload: string; userId: string }): Promise<void>;
   setPayload(options: { payload: string }): Promise<void>;
   stop(): Promise<void>;
   addListener(eventName: "peer", listener: (ev: { payload: string }) => void): Promise<PluginListenerHandle>;
@@ -104,11 +104,16 @@ export async function startPhoneNearby(
   presence: Presence,
   onPeer: (peer: Presence) => void,
 ): Promise<() => void> {
-  await native.start({ payload: encodeNearbyPayload(presence) });
   const handle = await native.addListener("peer", (ev) => {
     const peer = decodeNearbyPayload(ev.payload || "");
     if (peer) onPeer(peer);
   });
+  try {
+    await native.start({ payload: encodeNearbyPayload(presence), userId: presence.userId });
+  } catch (err) {
+    await handle.remove();
+    throw err;
+  }
   return () => {
     void handle.remove();
     void native.stop();
