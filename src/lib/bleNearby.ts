@@ -16,19 +16,38 @@ export function canUsePhoneNearby(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
 }
 
-function slimCards(cards: Card[]): { id: string; name: string }[] {
-  return cards.slice(0, 24).map((c) => ({ id: c.id, name: c.name.slice(0, 24) }));
+function cardIds(cards: Card[], n: number): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const c of cards) {
+    if (!c.id || seen.has(c.id)) continue;
+    seen.add(c.id);
+    out.push(c.id);
+    if (out.length >= n) break;
+  }
+  return out;
 }
 
 export function encodeNearbyPayload(p: Presence): string {
-  return JSON.stringify({
-    userId: p.userId,
-    name: (p.name || "Trainer").slice(0, 24),
-    note: p.note?.slice(0, 40),
-    have: slimCards(p.have),
-    want: slimCards(p.want),
-    ts: p.ts,
-  });
+  let haveN = 12;
+  let wantN = 12;
+  const pack = (have: number, want: number) =>
+    JSON.stringify({
+      userId: p.userId,
+      name: (p.name || "Trainer").slice(0, 24),
+      note: p.note?.slice(0, 40),
+      have: cardIds(p.have, have),
+      want: cardIds(p.want, want),
+      ts: p.ts,
+    });
+  let raw = pack(haveN, wantN);
+  while (raw.length > 450 && (haveN > 4 || wantN > 4)) {
+    if (haveN >= wantN && haveN > 4) haveN -= 1;
+    else if (wantN > 4) wantN -= 1;
+    else break;
+    raw = pack(haveN, wantN);
+  }
+  return raw;
 }
 
 function inflate(list: unknown): Card[] {

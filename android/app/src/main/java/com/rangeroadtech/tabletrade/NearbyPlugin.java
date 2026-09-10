@@ -2,7 +2,6 @@ package com.rangeroadtech.tabletrade;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
@@ -23,10 +22,13 @@ import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.ParcelUuid;
 import android.util.Log;
 
 import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -64,7 +66,9 @@ public class NearbyPlugin extends Plugin {
     private BluetoothGatt openGatt;
     private byte[] payload = "{}".getBytes(StandardCharsets.UTF_8);
     private boolean running = false;
-    private final Set<String> seen = new HashSet<>();
+    private final Set<String> delivered = new HashSet<>();
+    private final Set<String> inFlight = new HashSet<>();
+    private final Handler main = new Handler(Looper.getMainLooper());
 
     private final AdvertiseCallback advertiseCallback = new AdvertiseCallback() {
         @Override
@@ -86,13 +90,13 @@ public class NearbyPlugin extends Plugin {
         String body = call.getString("payload", "{}");
         payload = body.getBytes(StandardCharsets.UTF_8);
         if (Build.VERSION.SDK_INT >= 31) {
-            if (getPermissionState("scan") != com.getcapacitor.PermissionState.GRANTED
-                    || getPermissionState("advertise") != com.getcapacitor.PermissionState.GRANTED
-                    || getPermissionState("connect") != com.getcapacitor.PermissionState.GRANTED) {
+            if (getPermissionState("scan") != PermissionState.GRANTED
+                    || getPermissionState("advertise") != PermissionState.GRANTED
+                    || getPermissionState("connect") != PermissionState.GRANTED) {
                 requestPermissionForAliases(new String[] { "scan", "advertise", "connect" }, call, "permStart");
                 return;
             }
-        } else if (getPermissionState("location") != com.getcapacitor.PermissionState.GRANTED) {
+        } else if (getPermissionState("location") != PermissionState.GRANTED) {
             requestPermissionForAliases(new String[] { "location" }, call, "permStart");
             return;
         }
@@ -101,6 +105,17 @@ public class NearbyPlugin extends Plugin {
 
     @PermissionCallback
     private void permStart(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= 31) {
+            if (getPermissionState("scan") != PermissionState.GRANTED
+                    || getPermissionState("advertise") != PermissionState.GRANTED
+                    || getPermissionState("connect") != PermissionState.GRANTED) {
+                call.reject("Allow Bluetooth, then tap I’m looking.");
+                return;
+            }
+        } else if (getPermissionState("location") != PermissionState.GRANTED) {
+            call.reject("Allow the nearby permission, then tap I’m looking.");
+            return;
+        }
         begin(call);
     }
 
@@ -130,7 +145,8 @@ public class NearbyPlugin extends Plugin {
         }
         halt();
         running = true;
-        seen.clear();
+        delivered.clear();
+        inFlight.clear();
         try {
             gattServer = mgr.openGattServer(getContext(), serverCallback);
             BluetoothGattService service = new BluetoothGattService(SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY);
@@ -138,6 +154,7 @@ public class NearbyPlugin extends Plugin {
                     CHAR,
                     BluetoothGattCharacteristic.PROPERTY_READ,
                     BluetoothGattCharacteristic.PERMISSION_READ);
+            ch.setValue(payload);
             service.addCharacteristic(ch);
             gattServer.addService(service);
 
@@ -175,9 +192,10 @@ public class NearbyPlugin extends Plugin {
     @SuppressLint("MissingPermission")
     private void readPeer(BluetoothDevice device) {
         if (!running) return;
-        String id = device.getAddress();
-        if (seen.contains(id)) return;
-        seen.add(id);
+        final String id = device.getAddress();
+        if (delivered.contains(id) || inFlight.contains(id)) return;
+        inFlight.add(id);
+        main.postDelayed(() -> inFlight.remove(id), 12_000);
         try {
             if (openGatt != null) {
                 openGatt.close();
@@ -187,11 +205,19 @@ public class NearbyPlugin extends Plugin {
                 @Override
                 public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
                     if (newState == BluetoothProfile.STATE_CONNECTED) {
-                        gatt.discoverServices();
+                        if (!gatt.requestMtu(517)) {
+                            gatt.discoverServices();
+                        }
                     } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                         gatt.close();
+                        inFlight.remove(id);
                         if (openGatt == gatt) openGatt = null;
                     }
+                }
+
+                @Override
+                public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
+                    gatt.discoverServices();
                 }
 
                 @Override
@@ -211,19 +237,29 @@ public class NearbyPlugin extends Plugin {
 
                 @Override
                 public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-                    byte[] value = characteristic.getValue();
-                    if (value != null && value.length > 0) {
-                        JSObject ev = new JSObject();
-                        ev.put("payload", new String(value, StandardCharsets.UTF_8));
-                        notifyListeners("peer", ev);
-                    }
-                    gatt.disconnect();
+                    emitRead(gatt, characteristic.getValue(), status, id);
+                }
+
+                @Override
+                public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, byte[] value, int status) {
+                    emitRead(gatt, value, status, id);
                 }
             });
         } catch (Exception e) {
             Log.w(TAG, "readPeer", e);
-            seen.remove(id);
+            inFlight.remove(id);
         }
+    }
+
+    private void emitRead(BluetoothGatt gatt, byte[] value, int status, String id) {
+        if (status == BluetoothGatt.GATT_SUCCESS && value != null && value.length > 0) {
+            JSObject ev = new JSObject();
+            ev.put("payload", new String(value, StandardCharsets.UTF_8));
+            notifyListeners("peer", ev);
+            delivered.add(id);
+        }
+        inFlight.remove(id);
+        gatt.disconnect();
     }
 
     private final BluetoothGattServerCallback serverCallback = new BluetoothGattServerCallback() {
@@ -231,16 +267,14 @@ public class NearbyPlugin extends Plugin {
         public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset,
                                                 BluetoothGattCharacteristic characteristic) {
             if (gattServer == null) return;
-            byte[] slice = payload;
-            if (offset > 0) {
-                if (offset >= slice.length) {
-                    gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, new byte[0]);
-                    return;
-                }
-                byte[] rest = new byte[slice.length - offset];
-                System.arraycopy(slice, offset, rest, 0, rest.length);
-                slice = rest;
+            byte[] all = payload;
+            if (offset >= all.length) {
+                gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, new byte[0]);
+                return;
             }
+            int max = Math.min(512, all.length - offset);
+            byte[] slice = new byte[max];
+            System.arraycopy(all, offset, slice, 0, max);
             gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, slice);
         }
     };
@@ -268,7 +302,9 @@ public class NearbyPlugin extends Plugin {
         } catch (Exception ignored) {
         }
         gattServer = null;
-        seen.clear();
+        delivered.clear();
+        inFlight.clear();
+        main.removeCallbacksAndMessages(null);
     }
 
     @Override

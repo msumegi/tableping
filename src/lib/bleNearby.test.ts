@@ -21,5 +21,6 @@ describe("nearby payload", () => {
     expect(back?.note).toBe("Red hoodie");
     expect(back?.have[0]?.id).toBe("base1-58");
     expect(back?.want[0]?.id).toBe("base1-4");
+    expect(raw.length).toBeLessThan(450);
   });
 });
