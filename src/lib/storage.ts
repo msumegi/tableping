@@ -48,6 +48,8 @@ export function loadSettings(): Settings {
     photo: stored?.photo,
     lastShopId: stored?.lastShopId,
     lookingNote: typeof stored?.lookingNote === "string" ? stored.lookingNote.slice(0, 40) : "",
+    ageOk: Boolean(stored?.ageOk),
+    blockedIds: Array.isArray(stored?.blockedIds) ? stored.blockedIds.filter((id) => typeof id === "string") : [],
   };
 }
 

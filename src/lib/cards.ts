@@ -10,6 +10,47 @@ const SEARCH_TIMEOUT_MS = 8000;
 export const SEARCH_UNAVAILABLE =
   "Can't reach the card list right now. Try a well-known name like Pikachu, or check your connection.";
 
+const CATALOG_CACHE = "tableping.catalogCache.v1";
+
+function readCatalogCache(): Record<string, Card[]> {
+  try {
+    const raw = localStorage.getItem(CATALOG_CACHE);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, Card[]>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeCatalogCache(map: Record<string, Card[]>): void {
+  try {
+    const keys = Object.keys(map);
+    const trimmed: Record<string, Card[]> = {};
+    for (const key of keys.slice(-80)) trimmed[key] = map[key];
+    localStorage.setItem(CATALOG_CACHE, JSON.stringify(trimmed));
+  } catch {
+    /* quota */
+  }
+}
+
+function cacheKey(query: string): string {
+  return query.trim().toLowerCase();
+}
+
+function cachedCards(query: string): Card[] {
+  if (typeof localStorage === "undefined") return [];
+  const hit = readCatalogCache()[cacheKey(query)];
+  return Array.isArray(hit) ? hit : [];
+}
+
+function rememberCards(query: string, cards: Card[]): void {
+  if (typeof localStorage === "undefined" || !cards.length) return;
+  const map = readCatalogCache();
+  map[cacheKey(query)] = cards;
+  writeCatalogCache(map);
+}
+
 type PtcgCard = {
   id?: string;
   name?: string;
@@ -169,19 +210,30 @@ export async function searchCards(query: string): Promise<Card[]> {
   const q = query.trim();
   if (q.length < 2) return [];
   const parsed = parseCatalogQuery(q);
+  const local = searchLocalCatalog(q);
+  const cached = cachedCards(q);
 
   try {
     const remote = await searchPokemonTcgApi(q);
     const matched = remote.filter((card) => cardMatchesQuery(card, q));
-    if (matched.length) return rankSearchResults(q, matched).slice(0, 36);
+    if (matched.length) {
+      const ranked = rankSearchResults(q, matched).slice(0, 36);
+      rememberCards(q, ranked);
+      return ranked;
+    }
     if (parsed.set) {
       const byName = await searchPokemonTcgLucene(luceneNameQuery(parsed.name));
       const setHits = byName.filter((card) => cardMatchesQuery(card, q));
-      if (setHits.length) return rankSearchResults(q, setHits).slice(0, 36);
+      if (setHits.length) {
+        const ranked = rankSearchResults(q, setHits).slice(0, 36);
+        rememberCards(q, ranked);
+        return ranked;
+      }
     }
-    return searchLocalCatalog(q);
+    if (cached.length) return cached;
+    return local;
   } catch {
-    const local = searchLocalCatalog(q);
+    if (cached.length) return cached;
     if (local.length) return local;
     throw new Error(SEARCH_UNAVAILABLE);
   }

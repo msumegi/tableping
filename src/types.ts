@@ -47,4 +47,6 @@ export type Settings = {
   photo?: string;
   lastShopId?: string;
   lookingNote?: string;
+  ageOk?: boolean;
+  blockedIds?: string[];
 };

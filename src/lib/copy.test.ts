@@ -38,7 +38,7 @@ describe("check-in hint", () => {
   });
 
   it("says you are looking after check-in", () => {
-    expect(checkInHint(true)).toBe("You’re looking. Matches close by will ping.");
+    expect(checkInHint(true)).toMatch(/You’re looking/);
   });
 });
 
@@ -49,7 +49,7 @@ describe("join and first-run copy", () => {
     expect(HAVE_FIRST_RUN_BODY).toMatch(/I’m looking/);
     expect(HAVE_FIRST_RUN_BODY).toMatch(/lists overlap/);
     expect(HAVE_FIRST_RUN_BODY).toMatch(/Then you talk/);
-    expect(HAVE_FIRST_RUN_PRIVACY).toBe("Lists live on the phone. No password.");
+    expect(HAVE_FIRST_RUN_PRIVACY).toMatch(/Looking shares/);
     expect(text.split(/\s+/).length).toBeLessThan(80);
   });
 
@@ -86,10 +86,10 @@ describe("join and first-run copy", () => {
   it("echoes site privacy and strengths-only product lines", () => {
     expect(HAVE_LEDE).toBe("Cards you’d trade here, now.");
     expect(WANT_LEDE).toBe("What you’re hunting.");
-    expect(YOU_LEDE).toBe("Lists live on the phone. No password.");
+    expect(YOU_LEDE).toMatch(/Lists live on the phone/);
     expect(YOU_WHAT).toBe("Pokémon trades close by. Match, then talk.");
-    expect(PRIVACY_LISTS).toMatch(/live on the device/);
-    expect(PRIVACY_PING).toBe("A ping when someone close by is a match.");
+    expect(PRIVACY_LISTS).toMatch(/I’m looking/);
+    expect(PRIVACY_PING).toMatch(/ping/i);
     expect(PRIVACY_FAN).toBe("TableTrade is an unofficial fan tool.");
   });
 

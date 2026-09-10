@@ -45,13 +45,22 @@ import {
   YOU_LEDE,
   YOU_PHOTO_HINT,
   YOU_WHAT,
+  AGE_TITLE,
+  AGE_BODY,
+  AGE_YES,
+  AGE_NO,
+  AGE_BLOCKED,
+  RADIO_DOWN,
+  HEAR_AGAIN,
+  REPORT_PEER,
+  MATCH_PRINTING,
 } from "./lib/copy";
 import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
 import { presenceDistanceM, presenceMatchSource } from "./lib/checkin";
 import { encodeGeohash } from "./lib/geo";
 import { kindLabel, matchAgainst, sourceLabel } from "./lib/match";
 import { compressProfilePhoto, initialsFromName } from "./lib/photo";
-import { connectLocalHub, connectPresenceHub, HEARTBEAT_MS, PRESENCE_TTL_MS } from "./lib/presence";
+import { connectLocalHub, connectPresenceHub, HEARTBEAT_MS, PRESENCE_TTL_MS, mqttBrokerUrl } from "./lib/presence";
 
 const TABS: { id: Tab; ico: string; lbl: string }[] = [
   { id: "have", ico: "▣", lbl: "Have" },
@@ -75,6 +84,8 @@ export default function App() {
   const [activePing, setActivePing] = useState<TradeMatch | null>(null);
   const [showPhoto, setShowPhoto] = useState(false);
   const [seedNote, setSeedNote] = useState("");
+
+  const [ageBlocked, setAgeBlocked] = useState(false);
 
   const haveRef = useRef(have);
   const wantRef = useRef(want);
@@ -102,6 +113,10 @@ export default function App() {
   }
 
   function startLooking() {
+    if (!mqttBrokerUrl() && !import.meta.env.DEV) {
+      setHintStatus(RADIO_DOWN);
+      return;
+    }
     if (!navigator.geolocation) {
       setHintStatus("This phone cannot share location.");
       return;
@@ -150,6 +165,7 @@ export default function App() {
 
   function ingestPeer(peer: Presence, source: MatchSource, force = false, distanceM?: number) {
     if (peer.ts === 0) return;
+    if (settingsRef.current.blockedIds?.includes(peer.userId)) return;
     const match = matchAgainst(
       { userId: settingsRef.current.userId, have: haveRef.current, want: wantRef.current },
       peer,
@@ -163,6 +179,18 @@ export default function App() {
     setMatches((prev) => [match, ...prev.filter((m) => m.id !== match.id)].slice(0, 20));
     setActivePing(match);
     vibratePing();
+  }
+
+  function blockPeer(userId: string) {
+    const blocked = [...(settingsRef.current.blockedIds ?? []), userId];
+    remember({ ...settingsRef.current, blockedIds: blocked });
+    setMatches((prev) => prev.filter((m) => m.peer.userId !== userId));
+    setActivePing(null);
+  }
+
+  function hearAgain() {
+    seenRef.current = new Set();
+    saveSeenMatchIds([]);
   }
 
   function fireDemo() {
@@ -257,6 +285,29 @@ export default function App() {
 
   return (
     <div className="app">
+      {!settings.ageOk && !ageBlocked ? (
+        <div className="ping-sheet">
+          <div className="sheet">
+            <h2 className="ping-title">{AGE_TITLE}</h2>
+            <p className="lede">{AGE_BODY}</p>
+            <div className="sheet-actions">
+              <button className="btn ember full" onClick={() => remember({ ...settings, ageOk: true })}>
+                {AGE_YES}
+              </button>
+              <button className="btn secondary full" onClick={() => setAgeBlocked(true)}>
+                {AGE_NO}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {ageBlocked ? (
+        <div className="ping-sheet">
+          <div className="sheet">
+            <p className="lede">{AGE_BLOCKED}</p>
+          </div>
+        </div>
+      ) : null}
       <header className="topbar">
         <div>
           <h1 className="brand" aria-label="TableTrade">
@@ -303,6 +354,7 @@ export default function App() {
             onStartLooking={startLooking}
             onStopLooking={stopLooking}
             onDemo={fireDemo}
+            onHearAgain={hearAgain}
             onOpenPing={setActivePing}
           />
         )}
@@ -338,7 +390,9 @@ export default function App() {
           onPickKeepOpen={(card) => addCard(addingFor, card, true)}
         />
       )}
-      {activePing && <PingSheet match={activePing} onClose={() => setActivePing(null)} />}
+      {activePing && (
+        <PingSheet match={activePing} onClose={() => setActivePing(null)} onBlock={blockPeer} />
+      )}
       {showPhoto ? (
         <ProfilePhotoSheet
           onClose={() => setShowPhoto(false)}
@@ -421,6 +475,7 @@ function NearbyPane({
   onStartLooking,
   onStopLooking,
   onDemo,
+  onHearAgain,
   onOpenPing,
 }: {
   settings: Settings;
@@ -435,6 +490,7 @@ function NearbyPane({
   onStartLooking: () => void;
   onStopLooking: () => void;
   onDemo: () => void;
+  onHearAgain: () => void;
   onOpenPing: (m: TradeMatch) => void;
 }) {
   return (
@@ -490,16 +546,19 @@ function NearbyPane({
         )}
       </div>
 
-      <button className="btn ember full demo-after-checkin" onClick={onDemo}>
-        See a demo ping now
-      </button>
+      {import.meta.env.DEV ? (
+        <button className="btn ember full demo-after-checkin" onClick={onDemo}>
+          See a demo ping now
+        </button>
+      ) : null}
       {seedNote ? <p className="hint">{seedNote}</p> : null}
+      <p className="hint">{MATCH_PRINTING}</p>
 
       <h3 className="panel-title" style={{ marginTop: 18 }}>
         Pings
       </h3>
       {matches.length === 0 ? (
-        <div className="empty">No pings yet. Try a demo if you’re alone.</div>
+        <div className="empty">No pings yet.</div>
       ) : (
         <div className="match-list">
           {matches.map((m) => (
@@ -517,14 +576,11 @@ function NearbyPane({
           ))}
         </div>
       )}
-
-      <details className="advanced">
-        <summary>Advanced</summary>
-        <p className="hint">
-          Live: {live ? "yes" : "no"} · Broker: {brokerStatus}
-          {liveCount ? ` · ${liveCount} recent ping${liveCount === 1 ? "" : "s"}` : ""}
-        </p>
-      </details>
+      {matches.length > 0 ? (
+        <button className="btn secondary" onClick={onHearAgain} style={{ marginTop: 12 }}>
+          {HEAR_AGAIN}
+        </button>
+      ) : null}
     </section>
   );
 }
@@ -589,18 +645,22 @@ function YouPane({
             <p className="hint">{YOU_PHOTO_HINT}</p>
           </div>
         </div>
-        <div className="toggle-row">
-          <div>
-            <strong>Demo mode</strong>
-            <div className="hint">A ping without a second phone.</div>
-          </div>
-          <button className={settings.demoMode ? "btn" : "btn secondary"} onClick={() => onDemoMode(!settings.demoMode)}>
-            {settings.demoMode ? "On" : "Off"}
-          </button>
-        </div>
-        <button className="btn ember" onClick={onDemo}>
-          See a demo ping now
-        </button>
+        {import.meta.env.DEV ? (
+          <>
+            <div className="toggle-row">
+              <div>
+                <strong>Demo mode</strong>
+                <div className="hint">A ping without a second phone.</div>
+              </div>
+              <button className={settings.demoMode ? "btn" : "btn secondary"} onClick={() => onDemoMode(!settings.demoMode)}>
+                {settings.demoMode ? "On" : "Off"}
+              </button>
+            </div>
+            <button className="btn ember" onClick={onDemo}>
+              See a demo ping now
+            </button>
+          </>
+        ) : null}
       </div>
       <h3 className="panel-title">What this is</h3>
       <p className="lede">{YOU_WHAT}</p>
@@ -644,7 +704,7 @@ function YouPane({
   );
 }
 
-function PingSheet({ match, onClose }: { match: TradeMatch; onClose: () => void }) {
+function PingSheet({ match, onClose, onBlock }: { match: TradeMatch; onClose: () => void; onBlock: (id: string) => void }) {
   const give = match.youCanGive[0];
   const get = match.youCanGet[0];
   const note = match.peer.note?.trim();
@@ -683,6 +743,11 @@ function PingSheet({ match, onClose }: { match: TradeMatch; onClose: () => void 
           <button className="btn ember full" onClick={onClose}>
             Go talk
           </button>
+          {match.source !== "demo" ? (
+            <button className="btn secondary full" onClick={() => onBlock(match.peer.userId)}>
+              {REPORT_PEER}
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
