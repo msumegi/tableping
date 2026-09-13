@@ -25,11 +25,14 @@ describe("marketing landing page is a static public file", () => {
     expect(html).not.toMatch(/TablePing/);
     expect(html).not.toMatch(/NowTrade/);
     expect(html).not.toMatch(/tonight/i);
-    expect(html).toContain("Range Road Technologies");
-    expect(html).toContain("Built by");
-    expect(html).toContain("Matthew Sumegi");
+    expect(html).toContain("Central Alberta Technologies");
+    expect(html).toContain("lead developer");
+    expect(html).toContain("Matt Sumegi");
+    expect(html).toContain("https://grokipedia.com/page/Matthew_Sumegi");
     expect(html).toContain("https://msumegi.github.io/tableping/");
-    expect(html).toContain("https://rangeroadtech.com/");
+    expect(html).not.toContain("Range Road Technologies");
+    expect(html).not.toContain("https://rangeroadtech.com/");
+    expect(html).not.toContain("https://rangeroadtech.com/apps/tabletrade/");
     expect(html).toMatch(/unofficial/i);
     expect(html).toMatch(/Nintendo|Pokémon Company|Pokemon Company/);
     expect(html).toContain("Open TableTrade");

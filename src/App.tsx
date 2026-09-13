@@ -35,12 +35,11 @@ import {
   PRIVACY_FAN,
   PRIVACY_LISTS,
   PRIVACY_PING,
-  SITE_APP_PAGE,
-  SITE_HOME,
   SITE_PRIVACY,
   HELP_MAIL,
   COMPANY,
   BUILT_BY,
+  GROKIPEDIA,
   WANT_LEDE,
   YOU_LEDE,
   YOU_PHOTO_HINT,
@@ -607,14 +606,11 @@ function YouPane({
         <li>{PRIVACY_FAN}</li>
       </ul>
       <p className="hint">
-        A product of {COMPANY}. {BUILT_BY}.
+        {BUILT_BY}. A product of {COMPANY}.
       </p>
       <ul className="privacy-lines">
         <li>
-          <a href={SITE_APP_PAGE}>About TableTrade</a>
-        </li>
-        <li>
-          <a href={SITE_HOME}>{COMPANY}</a>
+          <a href={GROKIPEDIA}>Matt Sumegi on Grokipedia</a>
         </li>
         <li>
           <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>

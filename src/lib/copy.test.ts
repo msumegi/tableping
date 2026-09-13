@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  BUILT_BY,
   CHECKIN_CTA,
   checkInHint,
   COMPANY,
@@ -21,8 +22,7 @@ import {
   PRIVACY_FAN,
   PRIVACY_LISTS,
   PRIVACY_PING,
-  SITE_APP_PAGE,
-  SITE_HOME,
+  GROKIPEDIA,
   WANT_LEDE,
   YOU_LEDE,
   YOU_WHAT,
@@ -93,14 +93,20 @@ describe("join and first-run copy", () => {
     expect(PRIVACY_FAN).toBe("TableTrade is an unofficial fan tool.");
   });
 
-  it("points You at the company site", () => {
-    expect(COMPANY).toBe("Range Road Technologies");
+  it("credits You with studio, lead, and Grokipedia", () => {
+    expect(COMPANY).toBe("Central Alberta Technologies");
+    expect(BUILT_BY).toBe("Matt Sumegi, lead developer");
+    expect(GROKIPEDIA).toBe("https://grokipedia.com/page/Matthew_Sumegi");
     expect(HELP_MAIL).toBe("help@rangeroadtech.com");
-    expect(SITE_HOME).toBe("https://rangeroadtech.com/");
-    expect(SITE_APP_PAGE).toContain("rangeroadtech.com/apps/tabletrade");
-    expect(app).toContain("SITE_HOME");
+    expect(app).toContain("GROKIPEDIA");
     expect(app).toContain("HELP_MAIL");
     expect(app).toContain("BUILT_BY");
+    expect(app).not.toContain("SITE_HOME");
+    expect(app).not.toContain("SITE_APP_PAGE");
+    expect(copySrc).not.toContain("Range Road Technologies");
+    expect(app).not.toContain("Range Road Technologies");
+    expect(copySrc).not.toContain("https://rangeroadtech.com/apps/tabletrade/");
+    expect(copySrc).not.toMatch(/SITE_HOME|SITE_APP_PAGE/);
   });
 
   it("keeps player-facing copy free of Tinder and we-don’t-do lists", () => {
