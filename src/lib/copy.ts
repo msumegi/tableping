@@ -54,13 +54,11 @@ export const HERE_NOTE_HINT = "Red hoodie. Back table. Optional.";
 
 export const HERE_NOTE_MAX = 40;
 
-export const COMPANY = "Range Road Technologies";
+export const COMPANY = "Central Alberta Technologies";
 
-export const BUILT_BY = "Built by Matthew Sumegi";
+export const BUILT_BY = "Matt Sumegi, lead developer";
 
-export const SITE_HOME = "https://rangeroadtech.com/";
-
-export const SITE_APP_PAGE = "https://rangeroadtech.com/apps/tabletrade/";
+export const GROKIPEDIA = "https://grokipedia.com/page/Matthew_Sumegi";
 
 export const SITE_PRIVACY = "https://rangeroadtech.com/privacy/";
 
