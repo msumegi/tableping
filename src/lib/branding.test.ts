@@ -11,6 +11,8 @@ const app = readFileSync(join(root, "src/App.tsx"), "utf8");
 describe("player-facing name is TableTrade", () => {
   it("uses TableTrade in the PWA document, install name, and share tags", () => {
     expect(indexHtml).toMatch(/<title>TableTrade<\/title>/);
+    expect(indexHtml).toContain('name="author" content="Matt Sumegi, Central Alberta Technologies"');
+    expect(indexHtml).not.toContain("Range Road Technologies");
     expect(indexHtml).toContain('content="TableTrade"');
     expect(indexHtml).toContain('apple-mobile-web-app-title');
     expect(indexHtml).toContain('property="og:title"');
