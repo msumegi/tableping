@@ -18,47 +18,45 @@ Share **TableTrade**: **[tableping/welcome](https://msumegi.github.io/tableping/
 
 ---
 
-## Try it on Android (no developer tools)
+## Install on two Android phones
 
-TableTrade is a small phone website you can install like an app (a PWA). Use **Chrome** on Android. The repo and live URL still use `tableping`.
+Close-by needs the **Android app** and **Bluetooth on both phones**. Website and iPhone: demo ping only. On the public site, I’m looking stays off. The demo is a local dev build: `npm run dev`, then **See a demo ping now**.
 
-### 1. Open it
+The install file is `tabletrade.apk`. Download the **tabletrade-apk** artifact from the **Sideload APK** workflow. It is signed so a normal phone can install it once unknown apps are allowed.
 
-After this repo is on GitHub and Pages is on, open:
+### 1. Download the APK
 
-**https://msumegi.github.io/tableping/**
+1. Sign in to GitHub
+2. Open **Actions** → **[Sideload APK](https://github.com/msumegi/tableping/actions/workflows/apk.yml)**
+3. Open the latest green run (a branch run is enough before merge; `main` after)
+4. Download the **tabletrade-apk** artifact
+5. Unzip it. You get `tabletrade.apk`
 
-**TableTrade** marketing / landing page:
+### 2. Allow unknown apps and install
 
-**https://msumegi.github.io/tableping/welcome/**
+On each phone:
 
-If that link 404s, turn on GitHub Pages once (takes about a minute):
+1. Copy `tabletrade.apk` onto the phone (USB, Drive, or a file share)
+2. Settings → Apps → special app access → **Install unknown apps**
+3. Allow it for the app that opens the file (Files, Chrome, or Drive)
+4. Tap `tabletrade.apk` → **Install**
+5. Open **TableTrade**
 
-1. On a computer, open the repo: https://github.com/msumegi/tableping
-2. **Settings** → **Pages**
-3. Under **Build and deployment**, set **Source** to **GitHub Actions**
-4. If the first deploy has not run yet, open the **Actions** tab and wait for **Deploy GitHub Pages** to finish (or tap **Run workflow**)
-5. Reload https://msumegi.github.io/tableping/ on the phone
+Do that on both phones. A later Play Store install needs this copy removed first. The signatures differ.
 
-### 2. Put it on the home screen
+### 3. Playtest the ping
 
-1. Open the link in **Chrome** (not Instagram in-app browser, not Samsung Internet if install is greyed out)
-2. Tap the **three dots** (top right)
-3. Tap **Add to Home screen** or **Install app**
-4. Tap **Install** / **Add**
-5. Open **TableTrade** from the home screen like any other app
+1. Turn **Bluetooth** on on both phones
+2. **You** → set a display name. A photo helps
+3. Add have and want cards that overlap
+4. Both open **Nearby** and tap **I’m looking**
+5. Allow Bluetooth when the phone asks. On Android 11 and older it may ask for location too. That permission is only so the phone can scan Bluetooth
+6. Optional: type **I’m over here** (red hoodie, back table)
+7. Keep the app open, in the same room. If the lists overlap, both phones fire
+8. Find them by name, photo, and that line. Then you talk
+9. Tap **Done looking** when you walk out
 
-**iPhone:** open the same link in **Safari** → Share → **Add to Home Screen**. No account needed.
-
-### 3. Tap through the first session
-
-1. Open **You** and set your display name
-2. Open **Have** → **Add a Pokémon card** → scan a card or search `Pikachu` → confirm a printing
-3. Open **Want** → scan or search `Charizard` → confirm a printing
-4. Open **Nearby** → tap **See a demo ping now**
-5. You should see a full-screen ping that **Kai (demo)** is here, with a card you can give and a card you can get
-
-That’s the whole v1 loop: lists, add a card (type or scan), nearby/demo ping.
+Alone, with no second phone: on a computer, `npm run dev`, then **See a demo ping now**. **Kai (demo)** shows up, with a card you can give and a card you can get.
 
 **Scan a stack of cards:** Have or Want → **Add a Pokémon card** → **Scan cards**. The camera stays open. Point at **one** card, confirm the match, flip to the next. Tap **Done** when you are finished. If the read is unsure, pick from a short list or type the name without leaving the loop. If the camera is blocked, TableTrade says so and search still works.
 
@@ -66,29 +64,35 @@ Binder-page photos are not in this version (sleeves and glare make a whole page 
 
 ---
 
-## Two people close by
+## Website and iPhone
 
-Do this when you are actually near each other. This is not a city-wide radar.
+Same screens. Demo ping only (`npm run dev` on a computer). I’m looking stays off here, so use the APK when you want a real ping.
 
-**Check in (the v1 path):**
+**https://msumegi.github.io/tableping/**
 
-1. Both people add have/want cards and a display name (a photo helps)
-2. Both open **Nearby** and tap **I’m looking**
-3. Optional: type **I’m over here** (red hoodie, back table)
-4. If the lists overlap and the phones are close, both phones fire
-5. Find them by name, photo, and that line. Then you talk.
+**https://msumegi.github.io/tableping/welcome/**
 
-If you are testing alone, you do not need a second phone: use **See a demo ping now**.
+Home screen, if you want the site as an icon:
+
+- **Android Chrome:** three dots → **Add to Home screen** or **Install app**
+- **iPhone Safari:** Share → **Add to Home Screen**
+
+If the link 404s, turn on GitHub Pages once:
+
+1. On a computer, open the repo: https://github.com/msumegi/tableping
+2. **Settings** → **Pages**
+3. Under **Build and deployment**, set **Source** to **GitHub Actions**
+4. If the first deploy has not run yet, open the **Actions** tab and wait for **Deploy GitHub Pages** to finish (or tap **Run workflow**)
+5. Reload https://msumegi.github.io/tableping/
 
 ---
 
-## What this is not (on purpose)
+## What it is
 
-- Not Utopia Market
-- Not Magic, One Piece, or a multi-game marketplace
-- Not a ~25 mile radius
-- Not a meetup / calendar product
-- No accounts, no passwords, no API keys required
+- Pokémon trades, in the room, right now
+- A ping when the lists overlap and both phones are looking
+- A name, a photo, and an optional I’m over here line
+- Lists stay on the phone. Match, then talk
 
 ---
 
@@ -105,7 +109,7 @@ npm run dev
 Then:
 
 - On the same computer: open the URL Vite prints (usually http://localhost:5173)
-- On an Android phone on the **same Wi‑Fi**: open `http://YOUR-COMPUTER-LAN-IP:5173` in Chrome. Chrome may warn that the connection is not HTTPS; for a home test that’s expected. Location and camera are more reliable on the GitHub Pages HTTPS site.
+- On an Android phone on the **same Wi‑Fi**: open `http://YOUR-COMPUTER-LAN-IP:5173` in Chrome. Chrome may warn that the connection is not HTTPS; for a home test that’s expected. The camera is more reliable on the GitHub Pages HTTPS site. Close-by still needs the Android app on both phones.
 
 Production build:
 
@@ -120,14 +124,14 @@ npm run preview
 
 | Piece | Choice | Why |
 | --- | --- | --- |
-| App | React + Vite **PWA** | Installable from Chrome on Android without the Play Store or Expo build machines |
+| App | React + Vite, Android app via Capacitor, plus the website PWA | Sideload the APK to playtest. The site needs no store install |
 | Cards | [Pokémon TCG API](https://docs.pokemontcg.io) (no key, CORS enabled) plus a local list of popular names | Type a name or a name+set (`umbreon evolving skies`); no secrets in the repo |
 | Card scan | One-card camera loop + on-device OCR, then the same catalog search | Log 20–200 cards without retyping names; confirm before add |
 | Lists | `localStorage` on the device | No account |
-| Demo ping | Local complementary trainer named Kai | One tester can see a ping |
-| Close-by check-in | Location over a public MQTT demo broker | Automatic ping when two phones tap I’m looking and are close |
+| Demo ping | Local complementary trainer named Kai | One tester can see a ping. Dev build only |
+| Close-by check-in | Bluetooth, native Android plugin only | Both phones run the app, Bluetooth on, and tap I’m looking. Website and iPhone do not |
 
-Live nearby uses HiveMQ’s **public** MQTT broker as a v1 convenience so there is no server to host and **no secrets to commit**. Treat it as a demo radio, not a private backend. Names, photos, and card ids of people who tap **I’m looking** can be seen on that channel. Tap **Done looking** when you walk out.
+While you are looking, your name and card ids go phone to phone over Bluetooth. Tap **Done looking** when you walk out.
 
 ---
 
