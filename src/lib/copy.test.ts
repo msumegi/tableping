@@ -25,6 +25,7 @@ import {
   SITE_HOME,
   WANT_LEDE,
   YOU_LEDE,
+  YOU_PHOTO_HINT,
   YOU_WHAT,
 } from "./copy";
 
@@ -100,7 +101,10 @@ describe("join and first-run copy", () => {
     expect(SITE_APP_PAGE).toContain("rangeroadtech.com/apps/tabletrade");
     expect(app).toContain("SITE_HOME");
     expect(app).toContain("HELP_MAIL");
-    expect(app).toContain("BUILT_BY");
+    expect(app).toContain("A product of {COMPANY}.");
+    expect(app).not.toContain("BUILT_BY");
+    expect(app).not.toMatch(/Matthew Sumegi/);
+    expect(YOU_PHOTO_HINT).toBe("A face they can spot in the room. Optional. Not sent while looking.");
   });
 
   it("keeps player-facing copy free of Tinder and we-don’t-do lists", () => {

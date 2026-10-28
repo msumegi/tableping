@@ -18,7 +18,7 @@ export const YOU_LEDE = "Lists live on the phone until you look. No password.";
 
 export const YOU_WHAT = "Pokémon trades close by. Match, then talk.";
 
-export const YOU_PHOTO_HINT = "A face they can call out in the room. Optional. Not sent while looking.";
+export const YOU_PHOTO_HINT = "A face they can spot in the room. Optional. Not sent while looking.";
 
 export const HAVE_FIRST_RUN_TITLE = "Here. Close by.";
 
@@ -55,8 +55,6 @@ export const HERE_NOTE_HINT = "Red hoodie. Back table. Optional.";
 export const HERE_NOTE_MAX = 40;
 
 export const COMPANY = "Range Road Technologies";
-
-export const BUILT_BY = "Built by Matthew Sumegi";
 
 export const SITE_HOME = "https://rangeroadtech.com/";
 

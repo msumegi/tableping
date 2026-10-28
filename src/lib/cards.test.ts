@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   QUICK_SEARCHES,
@@ -207,6 +210,87 @@ describe("searchCards", () => {
     expect(cards[0].number).toBe("4");
   });
 
+  it("uses TCGdex first and keeps those ids off the Pokémon TCG ids", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api.tcgdex.net/v2/en/sets")) {
+        return jsonResponse([{ id: "base1", name: "Base Set" }]);
+      }
+      if (url.includes("api.tcgdex.net/v2/en/cards")) {
+        return jsonResponse([
+          {
+            id: "base1-58",
+            localId: "58",
+            name: "Pikachu",
+            image: "https://assets.tcgdex.net/en/base/base1/58",
+          },
+        ]);
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const cards = await searchCards("Pikachu");
+    expect(cards[0]).toEqual({
+      id: "tcgdex:base1-58",
+      name: "Pikachu",
+      image: "https://assets.tcgdex.net/en/base/base1/58/low.webp",
+      setName: "Base Set",
+      number: "58",
+    });
+    expect(JSON.stringify(fetchMock.mock.calls)).not.toContain("pokemontcg.io");
+  });
+
+  it("falls back to pokemontcg.io when TCGdex returns 502", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api.tcgdex.net")) return jsonResponse({ error: "down" }, 502);
+      return jsonResponse({
+        data: [
+          {
+            id: "base1-4",
+            name: "Charizard",
+            number: "4",
+            set: { name: "Base" },
+            images: { small: "https://images.pokemontcg.io/base1/4.png" },
+          },
+        ],
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const cards = await searchCards("Charizard");
+    expect(cards[0]).toMatchObject({ id: "base1-4", name: "Charizard", setName: "Base" });
+    expect(JSON.stringify(fetchMock.mock.calls)).toContain("api.pokemontcg.io/v2/cards");
+  });
+
+  it("falls back to pokemontcg.io when TCGdex times out", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api.tcgdex.net")) {
+        const err = new Error("The operation was aborted");
+        err.name = "AbortError";
+        throw err;
+      }
+      return jsonResponse({
+        data: [
+          {
+            id: "base1-58",
+            name: "Pikachu",
+            number: "58",
+            set: { name: "Base" },
+            images: { small: "https://images.pokemontcg.io/base1/58.png" },
+          },
+        ],
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const cards = await searchCards("Pikachu");
+    expect(cards[0].id).toBe("base1-58");
+    expect(JSON.stringify(fetchMock.mock.calls)).toContain("api.pokemontcg.io");
+  });
+
   it("never surfaces the browser Failed to fetch text when API and local miss", async () => {
     vi.stubGlobal(
       "fetch",
@@ -237,6 +321,13 @@ describe("local catalog", () => {
     expect(hits.length).toBeGreaterThan(0);
     expect(hits[0].setName.toLowerCase()).toContain("evolving skies");
     expect(hits[0].name.toLowerCase()).toContain("umbreon");
+  });
+
+  it("caches TCGdex the same way as the Pokémon TCG hosts", () => {
+    const vite = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../vite.config.ts"), "utf8");
+    expect(vite).toContain("tcgdex-api");
+    expect(vite).toContain("tcgdex-images");
+    expect(vite).toContain("pokemontcg-api");
   });
 
   it("includes Charizard and Pikachu in the quick chips", () => {

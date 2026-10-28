@@ -40,7 +40,6 @@ import {
   SITE_PRIVACY,
   HELP_MAIL,
   COMPANY,
-  BUILT_BY,
   WANT_LEDE,
   YOU_LEDE,
   YOU_PHOTO_HINT,
@@ -251,6 +250,7 @@ export default function App() {
       <header className="topbar">
         <div>
           <h1 className="brand" aria-label="TableTrade">
+            <img className="brand-mark" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" />
             Table<span>Trade</span>
           </h1>
           <p className="tag">Pokémon trades here, now. Close by.</p>
@@ -606,9 +606,7 @@ function YouPane({
         <li>{PRIVACY_PING}</li>
         <li>{PRIVACY_FAN}</li>
       </ul>
-      <p className="hint">
-        A product of {COMPANY}. {BUILT_BY}.
-      </p>
+      <p className="hint">A product of {COMPANY}.</p>
       <ul className="privacy-lines">
         <li>
           <a href={SITE_APP_PAGE}>About TableTrade</a>
