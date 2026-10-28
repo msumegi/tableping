@@ -100,7 +100,8 @@ img {
   height: 1.85rem;
   flex: none;
   display: block;
-  object-fit: contain;
+  padding: 0;
+  object-fit: fill;
 }
 
 .tag {
