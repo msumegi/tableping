@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Card } from "./types";
 import { QUICK_SEARCHES, SEARCH_UNAVAILABLE, hydrateSetName, searchCards } from "./lib/cards";
+import { manualCard } from "./lib/manualCard";
 
 export function CardSearchPanel({
   onPick,
@@ -17,6 +18,9 @@ export function CardSearchPanel({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [results, setResults] = useState<Card[]>([]);
+  const [handName, setHandName] = useState("");
+  const [handSet, setHandSet] = useState("");
+  const [handNumber, setHandNumber] = useState("");
 
   async function run(term: string) {
     setErr("");
@@ -67,6 +71,26 @@ export function CardSearchPanel({
       ) : null}
       {busy ? <p className="status">Searching…</p> : null}
       {err ? <p className="status error">{err}</p> : null}
+      <form
+        className="hand-add"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const card = manualCard(handName, handSet, handNumber);
+          if (!card) return;
+          onPick(card);
+          setHandName("");
+          setHandSet("");
+          setHandNumber("");
+        }}
+      >
+        <p className="hint">Can’t find it? Add the English name, set, and number by hand.</p>
+        <input className="field" placeholder="Card name" aria-label="Card name" value={handName} onChange={(e) => setHandName(e.target.value)} />
+        <input className="field" placeholder="Set" aria-label="Set" value={handSet} onChange={(e) => setHandSet(e.target.value)} />
+        <input className="field" placeholder="Number" aria-label="Number" value={handNumber} onChange={(e) => setHandNumber(e.target.value)} />
+        <button className="btn secondary full" type="submit">
+          Add this card
+        </button>
+      </form>
       <div className="card-grid">
         {results.map((card) => (
           <button
@@ -74,7 +98,7 @@ export function CardSearchPanel({
             className="card-tile"
             onClick={async () => onPick(await hydrateSetName(card))}
           >
-            <img src={card.image} alt={card.name} />
+            {card.image ? <img src={card.image} alt={card.name} /> : <div className="card-blank" aria-hidden />}
             <figcaption>
               <div className="name">{card.name}</div>
               <div className="meta">

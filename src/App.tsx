@@ -1,6 +1,8 @@
+import { Capacitor } from "@capacitor/core";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Card, MatchSource, Presence, Settings, Tab, TradeMatch } from "./types";
 import { AddCardSheet } from "./AddCardSheet";
+import { InviteSheet } from "./InviteSheet";
 import { ProfilePhotoSheet } from "./ProfilePhotoSheet";
 import {
   loadHave,
@@ -53,7 +55,9 @@ import {
   HEAR_AGAIN,
   REPORT_PEER,
   MATCH_PRINTING,
+  APP_TAGLINE,
 } from "./lib/copy";
+import { INVITE_BUTTON } from "./lib/invite";
 import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
 import { kindLabel, matchAgainst, sourceLabel } from "./lib/match";
 import { compressProfilePhoto, initialsFromName } from "./lib/photo";
@@ -61,10 +65,10 @@ import { connectLocalHub } from "./lib/presence";
 import { canUsePhoneNearby, startPhoneNearby, updatePhoneNearby } from "./lib/bleNearby";
 
 const TABS: { id: Tab; ico: string; lbl: string }[] = [
-  { id: "have", ico: "▣", lbl: "Have" },
+  { id: "have", ico: "▢", lbl: "Have" },
   { id: "want", ico: "☆", lbl: "Want" },
   { id: "nearby", ico: "◎", lbl: "Nearby" },
-  { id: "you", ico: "●", lbl: "You" },
+  { id: "you", ico: "○", lbl: "You" },
 ];
 
 export default function App() {
@@ -80,6 +84,7 @@ export default function App() {
   const [matches, setMatches] = useState<TradeMatch[]>([]);
   const [activePing, setActivePing] = useState<TradeMatch | null>(null);
   const [showPhoto, setShowPhoto] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
   const [seedNote, setSeedNote] = useState("");
 
   const [ageBlocked, setAgeBlocked] = useState(false);
@@ -250,12 +255,14 @@ export default function App() {
       <header className="topbar">
         <div>
           <h1 className="brand" aria-label="TableTrade">
-            <img className="brand-mark" src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" />
-            Table<span>Trade</span>
+            <img className="brand-mark" src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" />
+            <span className="brand-name">
+              Table<span>Trade</span>
+            </span>
           </h1>
-          <p className="tag">Pokémon trades here, now. Close by.</p>
+          <p className="tag">{APP_TAGLINE}</p>
         </div>
-        {activePing ? <span className="pill ok">Ping</span> : <span className="pill">{settings.displayName}</span>}
+        {activePing ? <span className="pill ok">Ping</span> : null}
       </header>
 
       <main className="screen">
@@ -265,7 +272,7 @@ export default function App() {
             lede={HAVE_LEDE}
             cards={have}
             empty="Nothing yet. Add a card you’d trade."
-            intro={have.length === 0 ? <HaveFirstRun showInstall={!isStandalonePwa()} /> : null}
+            intro={have.length === 0 ? <HaveFirstRun showInstall={!isNativeApp() && !isStandalonePwa()} /> : null}
             onAdd={() => setAddingFor("have")}
             onRemove={(id) => setHave((prev) => removeCard(prev, id))}
           />
@@ -296,12 +303,15 @@ export default function App() {
             onDemo={fireDemo}
             onHearAgain={hearAgain}
             onOpenPing={setActivePing}
+            onInvite={() => setShowInvite(true)}
           />
         )}
         {tab === "you" && (
           <YouPane
             settings={settings}
             installed={isStandalonePwa()}
+            native={isNativeApp()}
+            onInvite={() => setShowInvite(true)}
             onName={(displayName) => remember({ ...settings, displayName })}
             onLookingNote={(lookingNote) => remember({ ...settings, lookingNote })}
             onOpenPhoto={() => setShowPhoto(true)}
@@ -333,6 +343,7 @@ export default function App() {
       {activePing && (
         <PingSheet match={activePing} onClose={() => setActivePing(null)} onBlock={blockPeer} />
       )}
+      {showInvite ? <InviteSheet onClose={() => setShowInvite(false)} /> : null}
       {showPhoto ? (
         <ProfilePhotoSheet
           onClose={() => setShowPhoto(false)}
@@ -382,7 +393,7 @@ function ListPane({
               <button className="x" aria-label={`Remove ${card.name}`} onClick={() => onRemove(card.id)}>
                 ×
               </button>
-              <img src={card.image} alt={card.name} />
+              {card.image ? <img src={card.image} alt={card.name} /> : <div className="card-blank" aria-hidden />}
               <figcaption>
                 <div className="name">{card.name}</div>
                 <div className="meta">
@@ -414,6 +425,7 @@ function NearbyPane({
   onDemo,
   onHearAgain,
   onOpenPing,
+  onInvite,
 }: {
   settings: Settings;
   live: boolean;
@@ -429,6 +441,7 @@ function NearbyPane({
   onDemo: () => void;
   onHearAgain: () => void;
   onOpenPing: (m: TradeMatch) => void;
+  onInvite: () => void;
 }) {
   return (
     <section>
@@ -483,6 +496,10 @@ function NearbyPane({
         )}
       </div>
 
+      <button className="btn secondary full invite-launch" type="button" onClick={onInvite}>
+        {INVITE_BUTTON}
+      </button>
+
       {import.meta.env.DEV ? (
         <button className="btn ember full demo-after-checkin" onClick={onDemo}>
           See a demo ping now
@@ -525,21 +542,25 @@ function NearbyPane({
 function YouPane({
   settings,
   installed,
+  native,
   onName,
   onLookingNote,
   onOpenPhoto,
   onClearPhoto,
   onDemoMode,
   onDemo,
+  onInvite,
 }: {
   settings: Settings;
   installed: boolean;
+  native: boolean;
   onName: (name: string) => void;
   onLookingNote: (note: string) => void;
   onOpenPhoto: () => void;
   onClearPhoto: () => void;
   onDemoMode: (on: boolean) => void;
   onDemo: () => void;
+  onInvite: () => void;
 }) {
   return (
     <section>
@@ -599,41 +620,43 @@ function YouPane({
           </>
         ) : null}
       </div>
+      <button className="btn secondary full invite-launch" type="button" onClick={onInvite}>
+        {INVITE_BUTTON}
+      </button>
       <h3 className="panel-title">What this is</h3>
       <p className="lede">{YOU_WHAT}</p>
-      <ul className="privacy-lines">
-        <li>{PRIVACY_LISTS}</li>
-        <li>{PRIVACY_PING}</li>
-        <li>{PRIVACY_FAN}</li>
-      </ul>
-      <p className="hint">A product of {COMPANY}.</p>
-      <ul className="privacy-lines">
-        <li>
-          <a href={SITE_APP_PAGE}>About TableTrade</a>
-        </li>
-        <li>
-          <a href={SITE_HOME}>{COMPANY}</a>
-        </li>
-        <li>
-          <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>
-        </li>
-        <li>
-          <a href={SITE_PRIVACY}>Privacy</a>
-        </li>
-      </ul>
-      <h3 className="panel-title">{INSTALL_HEADING}</h3>
-      {installed ? (
-        <p className="lede">On your home screen. {INSTALL_NO_ACCOUNT}</p>
-      ) : (
-        <div className="you-card stack">
-          <p className="hint">{INSTALL_NO_ACCOUNT}</p>
-          <p className="lede" style={{ margin: 0 }}>
-            {INSTALL_IPHONE}
-          </p>
-          <p className="lede" style={{ margin: 0 }}>
-            {INSTALL_ANDROID}
-          </p>
-        </div>
+      <div className="plain-lines">
+        <p>{PRIVACY_LISTS}</p>
+        <p>{PRIVACY_PING}</p>
+        <p>{PRIVACY_FAN}</p>
+      </div>
+      <h3 className="panel-title">About</h3>
+      <div className="link-rows">
+        <a href={SITE_APP_PAGE}>About TableTrade</a>
+        <a href={SITE_HOME}>{COMPANY}</a>
+        <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>
+        <a href={SITE_PRIVACY}>Privacy</a>
+      </div>
+      <p className="product-foot">A product of {COMPANY}.</p>
+      {native ? null : (
+        <>
+          <h3 className="panel-title">{INSTALL_HEADING}</h3>
+          {installed ? (
+            <p className="lede">TableTrade is on your home screen. {INSTALL_NO_ACCOUNT}</p>
+          ) : (
+            <div className="you-card stack">
+              <p className="lede" style={{ margin: 0 }}>
+                {INSTALL_NO_ACCOUNT}
+              </p>
+              <p className="lede" style={{ margin: 0 }}>
+                {INSTALL_IPHONE}
+              </p>
+              <p className="lede" style={{ margin: 0 }}>
+                {INSTALL_ANDROID}
+              </p>
+            </div>
+          )}
+        </>
       )}
     </section>
   );
@@ -712,6 +735,10 @@ function HaveFirstRun({ showInstall }: { showInstall: boolean }) {
       ) : null}
     </div>
   );
+}
+
+function isNativeApp(): boolean {
+  return Capacitor.isNativePlatform();
 }
 
 function isStandalonePwa(): boolean {
