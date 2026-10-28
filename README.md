@@ -22,9 +22,15 @@ Share **TableTrade**: **[tableping/welcome](https://msumegi.github.io/tableping/
 
 Close-by needs the **Android app** and **Bluetooth on both phones**. Website and iPhone: demo ping only. On the public site, I’m looking stays off. The demo is a local dev build: `npm run dev`, then **See a demo ping now**.
 
-The install file is `tabletrade.apk`. Download the **tabletrade-apk** artifact from the **Sideload APK** workflow. It is signed so a normal phone can install it once unknown apps are allowed.
+The install file is `tabletrade.apk`. It is signed so a normal phone can install it once unknown apps are allowed.
 
 ### 1. Download the APK
+
+Direct link, no GitHub login:
+
+**https://github.com/msumegi/tableping/releases/download/apk-playtest/tabletrade.apk**
+
+That file is the playtest build. For a newer one, use Actions:
 
 1. Sign in to GitHub
 2. Open **Actions** → **[Sideload APK](https://github.com/msumegi/tableping/actions/workflows/apk.yml)**
