@@ -99,7 +99,7 @@ describe("join and first-run copy", () => {
     expect(COMPANY).toBe("Range Road Technologies");
     expect(HELP_MAIL).toBe("help@rangeroadtech.com");
     expect(SITE_HOME).toBe("https://rangeroadtech.com/");
-    expect(SITE_APP_PAGE).toContain("rangeroadtech.com/apps/tabletrade");
+    expect(SITE_APP_PAGE).toBe("https://rangeroadtech.com/apps/tabletrade/?from=app");
     expect(app).toContain("SITE_HOME");
     expect(app).toContain("HELP_MAIL");
     expect(app).toContain("A product of {COMPANY}.");

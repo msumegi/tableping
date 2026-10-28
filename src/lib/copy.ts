@@ -58,7 +58,7 @@ export const COMPANY = "Range Road Technologies";
 
 export const SITE_HOME = "https://rangeroadtech.com/";
 
-export const SITE_APP_PAGE = "https://rangeroadtech.com/apps/tabletrade/";
+export const SITE_APP_PAGE = "https://rangeroadtech.com/apps/tabletrade/?from=app";
 
 export const SITE_PRIVACY = "https://rangeroadtech.com/privacy/";
 

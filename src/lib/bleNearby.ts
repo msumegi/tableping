@@ -11,7 +11,7 @@ type NearbyNative = {
 
 const native = registerPlugin<NearbyNative>("TableTradeNearby");
 
-/** Same JS calls later on iPhone. Android implements them first. */
+/** Bluetooth looking is implemented on Android. */
 export function canUsePhoneNearby(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
 }
