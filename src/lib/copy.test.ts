@@ -88,7 +88,7 @@ describe("join and first-run copy", () => {
     expect(HAVE_LEDE).toMatch(/cards you would trade/i);
     expect(WANT_LEDE).toMatch(/cards you want/i);
     expect(YOU_LEDE).toMatch(/stay on this phone/);
-    expect(YOU_WHAT).toMatch(/close by/);
+    expect(YOU_WHAT).toMatch(/Trade Pokémon cards with someone nearby/);
     expect(YOU_WHAT).toMatch(/talk/);
     expect(PRIVACY_LISTS).toMatch(/I’m looking/);
     expect(PRIVACY_PING).toMatch(/ping/i);

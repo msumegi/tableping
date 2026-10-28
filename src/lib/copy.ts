@@ -16,7 +16,7 @@ export const NEARBY_LEDE =
 
 export const YOU_LEDE = "Your lists stay on this phone until you start looking. There is no password.";
 
-export const YOU_WHAT = "TableTrade finds Pokémon card trades with people close by. You match, then you talk.";
+export const YOU_WHAT = "Trade Pokémon cards with someone nearby. You match, then you talk.";
 
 export const YOU_PHOTO_HINT = "A face they can spot in the room. Optional. Not sent while looking.";
 
@@ -64,7 +64,7 @@ export const SITE_PRIVACY = "https://rangeroadtech.com/privacy/";
 
 export const HELP_MAIL = "help@rangeroadtech.com";
 
-export const APP_TAGLINE = "Pokémon card trades with someone close by.";
+export const APP_TAGLINE = "Trade Pokémon cards with someone nearby.";
 
 export const AGE_TITLE = "How old are you?";
 

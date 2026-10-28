@@ -25,7 +25,7 @@ export function InviteSheet({ onClose }: { onClose: () => void }) {
     try {
       await Share.share({
         title: "TableTrade",
-        text: "Install TableTrade and trade Pokémon cards with someone close by.",
+        text: "Trade Pokémon cards with someone nearby.",
         url: PLAY_STORE_URL,
         dialogTitle: INVITE_TITLE,
       });
