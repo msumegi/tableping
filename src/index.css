@@ -27,17 +27,33 @@
   box-sizing: border-box;
 }
 
-html,
+html {
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--night);
+}
+
 body,
 #root {
   margin: 0;
+  width: 100%;
   min-height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   height: 100%;
   background: var(--night);
 }
 
 body {
-  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+#root {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
 }
 
 button,
@@ -55,11 +71,17 @@ img {
 }
 
 .app {
-  min-height: 100dvh;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
   max-width: 480px;
+  min-height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0 auto;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
   background:
     radial-gradient(1200px 420px at 50% -10%, rgba(244, 201, 137, 0.16), transparent 55%),
     linear-gradient(180deg, #191511 0%, var(--night) 42%);
@@ -68,7 +90,8 @@ img {
 }
 
 .topbar {
-  padding: calc(12px + env(safe-area-inset-top)) 20px 8px;
+  flex: 0 0 auto;
+  padding: calc(12px + max(env(safe-area-inset-top), var(--safe-top, 0px))) 20px 8px;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -111,16 +134,20 @@ img {
 }
 
 .screen {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
   padding: 8px 16px 24px;
   -webkit-overflow-scrolling: touch;
 }
 
 .nav {
+  flex: 0 0 auto;
+  margin-top: auto;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
-  padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+  padding: 8px 10px calc(10px + max(env(safe-area-inset-bottom), var(--safe-bottom, 0px)));
   background: rgba(18, 16, 14, 0.92);
   border-top: 1px solid rgba(243, 234, 216, 0.08);
   backdrop-filter: blur(12px);
@@ -415,13 +442,15 @@ img {
 .sheet {
   background: #1b1714;
   border-radius: 22px 22px 0 0;
-  padding: 12px 16px calc(18px + env(safe-area-inset-bottom));
+  padding: 12px 16px calc(18px + max(env(safe-area-inset-bottom), var(--safe-bottom, 0px)));
+  max-height: 92vh;
   max-height: 92dvh;
   overflow: auto;
   box-shadow: var(--shadow);
 }
 
 .sheet.fullish {
+  height: 92vh;
   height: 92dvh;
 }
 
@@ -952,10 +981,8 @@ img {
 
 @media (min-width: 720px) {
   .app {
-    margin: 24px auto;
-    min-height: calc(100dvh - 48px);
-    border-radius: 28px;
-    border: 1px solid rgba(243, 234, 216, 0.08);
-    box-shadow: var(--shadow);
+    margin: 0 auto;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 }
