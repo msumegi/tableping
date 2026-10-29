@@ -51,6 +51,7 @@ import java.util.UUID;
         @Permission(strings = { Manifest.permission.BLUETOOTH_SCAN }, alias = "scan"),
         @Permission(strings = { Manifest.permission.BLUETOOTH_ADVERTISE }, alias = "advertise"),
         @Permission(strings = { Manifest.permission.BLUETOOTH_CONNECT }, alias = "connect"),
+        // Pre-Android 12 only. API 31+ scans with BLUETOOTH_SCAN neverForLocation and does not ask for this.
         @Permission(strings = { Manifest.permission.ACCESS_FINE_LOCATION }, alias = "location")
     }
 )
@@ -127,7 +128,7 @@ public class NearbyPlugin extends Plugin {
                 requestPermissionForAliases(new String[] { "scan", "advertise", "connect" }, call, "permStart");
                 return;
             }
-        } else if (getPermissionState("location") != PermissionState.GRANTED) {
+        } else if (needsLegacyScanLocation() && getPermissionState("location") != PermissionState.GRANTED) {
             requestPermissionForAliases(new String[] { "location" }, call, "permStart");
             return;
         }
@@ -143,11 +144,16 @@ public class NearbyPlugin extends Plugin {
                 call.reject("Allow Bluetooth, then tap I’m looking.");
                 return;
             }
-        } else if (getPermissionState("location") != PermissionState.GRANTED) {
-            call.reject("Allow the nearby permission, then tap I’m looking.");
+        } else if (needsLegacyScanLocation() && getPermissionState("location") != PermissionState.GRANTED) {
+            call.reject("Allow location so Bluetooth can scan on this Android version, then tap I’m looking.");
             return;
         }
         begin(call);
+    }
+
+    /** BLE scans before Android 12 need fine location. This app never reads GPS. */
+    private static boolean needsLegacyScanLocation() {
+        return Build.VERSION.SDK_INT < 31;
     }
 
     @PluginMethod
