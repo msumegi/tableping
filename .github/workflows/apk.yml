@@ -1,0 +1,48 @@
+name: Sideload APK
+
+# Installable APK for phones. Debug-signed, so branch runs do not need the
+# Play upload keystore. The Play bundle job stays in play-bundle.yml.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - "**"
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx cap sync android
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+      - name: Stage installable APK
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk tabletrade.apk
+          APKSIGNER=$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}"/build-tools -type f -name apksigner | sort | tail -n 1)
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose tabletrade.apk
+          ls -lh tabletrade.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tabletrade-apk
+          path: tabletrade.apk
+          if-no-files-found: error

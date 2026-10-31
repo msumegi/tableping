@@ -12,6 +12,19 @@
   --muted: #9a8f7e;
   --danger: #e07070;
   --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --shell: 480px;
+  --safe-top: 0px;
+  --safe-right: 0px;
+  --safe-bottom: 0px;
+  --safe-left: 0px;
+  --inset-top: max(env(safe-area-inset-top), var(--safe-top));
+  --inset-right: max(env(safe-area-inset-right), var(--safe-right));
+  --inset-bottom: max(env(safe-area-inset-bottom), var(--safe-bottom));
+  --inset-left: max(env(safe-area-inset-left), var(--safe-left));
+  --tab-pad-top: 6px;
+  --tab-btn: 48px;
+  --tab-pad-bot: 8px;
+  --tabbar: calc(var(--tab-pad-top) + var(--tab-btn) + var(--tab-pad-bot) + var(--inset-bottom));
   font-family: Outfit, system-ui, sans-serif;
   color: var(--paper);
   background: var(--night);
@@ -27,17 +40,32 @@
   box-sizing: border-box;
 }
 
-html,
+html {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--night);
+}
+
 body,
 #root {
   margin: 0;
-  min-height: 100%;
+  width: 100%;
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
   background: var(--night);
 }
 
 body {
-  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+#root {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
 }
 
 button,
@@ -55,11 +83,16 @@ img {
 }
 
 .app {
-  min-height: 100dvh;
-  max-width: 480px;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--shell);
+  height: 100%;
+  min-height: 0;
   margin: 0 auto;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  padding-left: var(--inset-left);
+  padding-right: var(--inset-right);
   background:
     radial-gradient(1200px 420px at 50% -10%, rgba(244, 201, 137, 0.16), transparent 55%),
     linear-gradient(180deg, #191511 0%, var(--night) 42%);
@@ -68,7 +101,8 @@ img {
 }
 
 .topbar {
-  padding: calc(12px + env(safe-area-inset-top)) 20px 8px;
+  flex: 0 0 auto;
+  padding: calc(10px + var(--inset-top)) 20px 6px;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -81,10 +115,27 @@ img {
   font-size: 1.55rem;
   letter-spacing: -0.03em;
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.brand span {
+.brand-name {
+  color: var(--paper);
+  letter-spacing: -0.04em;
+}
+
+.brand-name > span {
   color: var(--ember);
+}
+
+.brand-mark {
+  width: 1.85rem;
+  height: 1.85rem;
+  flex: none;
+  display: block;
+  padding: 0;
+  object-fit: fill;
 }
 
 .tag {
@@ -94,40 +145,62 @@ img {
 }
 
 .screen {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
-  padding: 8px 16px 24px;
+  overscroll-behavior: contain;
+  padding: 4px 16px var(--tabbar);
   -webkit-overflow-scrolling: touch;
 }
 
 .nav {
+  position: fixed;
+  z-index: 15;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: var(--shell);
+  height: var(--tabbar);
+  margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 4px;
-  padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
-  background: rgba(18, 16, 14, 0.92);
-  border-top: 1px solid rgba(243, 234, 216, 0.08);
+  align-items: start;
+  padding: var(--tab-pad-top) calc(10px + var(--inset-right)) calc(var(--tab-pad-bot) + var(--inset-bottom))
+    calc(10px + var(--inset-left));
+  background: rgba(18, 16, 14, 0.96);
+  border-top: 0;
+  box-shadow: inset 0 1px 0 rgba(243, 234, 216, 0.08);
   backdrop-filter: blur(12px);
 }
 
 .nav button {
   border: 0;
   background: transparent;
-  color: var(--muted);
-  padding: 8px 4px 6px;
+  color: rgba(243, 234, 216, 0.78);
+  height: var(--tab-btn);
+  padding: 4px 4px 2px;
   border-radius: 12px;
   display: grid;
-  gap: 2px;
+  gap: 1px;
+  align-content: center;
   justify-items: center;
 }
 
 .nav button.active {
-  color: var(--electric);
-  background: rgba(245, 215, 110, 0.08);
+  color: var(--ember);
+  background: rgba(255, 107, 53, 0.14);
 }
 
 .nav .ico {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   line-height: 1;
+  width: 1.2rem;
+  height: 1.2rem;
+  display: grid;
+  place-items: center;
+  font-weight: 500;
 }
 
 .nav .lbl {
@@ -166,10 +239,24 @@ img {
   position: relative;
 }
 
-.card-tile img {
+.card-tile img,
+.card-blank {
   aspect-ratio: 63 / 88;
   object-fit: cover;
   background: #1a1612;
+}
+
+.card-blank {
+  display: grid;
+  place-items: center;
+}
+
+.card-blank::after {
+  content: "";
+  width: 46%;
+  height: 62%;
+  border: 2px solid rgba(243, 234, 216, 0.4);
+  border-radius: 6px;
 }
 
 .card-tile figcaption {
@@ -245,6 +332,72 @@ img {
   color: var(--muted);
 }
 
+.plain-lines {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.plain-lines p {
+  margin: 0;
+}
+
+.link-rows {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+
+.link-rows a {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: #1b1714;
+  border: 1px solid rgba(243, 234, 216, 0.1);
+  color: var(--paper);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.invite-launch {
+  margin-top: 12px;
+}
+
+.product-foot {
+  margin: 8px 0 4px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.hand-add {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.qr-frame {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 12px;
+  display: grid;
+  place-items: center;
+}
+
+.qr-frame img {
+  width: min(100%, 280px);
+  height: auto;
+}
+
+.invite-url {
+  word-break: break-all;
+  text-align: center;
+}
+
 .privacy-lines {
   margin: 0 0 18px;
   padding-left: 18px;
@@ -313,13 +466,15 @@ img {
 .sheet {
   background: #1b1714;
   border-radius: 22px 22px 0 0;
-  padding: 12px 16px calc(18px + env(safe-area-inset-bottom));
+  padding: 12px 16px calc(18px + var(--inset-bottom));
+  max-height: 92vh;
   max-height: 92dvh;
   overflow: auto;
   box-shadow: var(--shadow);
 }
 
 .sheet.fullish {
+  height: 92vh;
   height: 92dvh;
 }
 
@@ -372,65 +527,39 @@ img {
   color: var(--danger);
 }
 
-.nearby-hero {
-  background:
-    radial-gradient(280px 140px at 50% 0%, rgba(255, 107, 53, 0.18), transparent 70%),
-    linear-gradient(180deg, var(--felt) 0%, #15261f 100%);
-  border-radius: 22px;
-  padding: 22px 18px 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  margin-bottom: 14px;
+.nearby-title {
+  margin-top: 2px;
 }
 
-.nearby-hero h2 {
-  font-family: Fraunces, Georgia, serif;
-  margin: 0 0 6px;
-  font-size: 1.45rem;
+.nearby-lede {
+  margin-bottom: 10px;
 }
 
-.radar {
-  width: 88px;
-  height: 88px;
-  margin: 8px auto 14px;
-  border-radius: 50%;
-  border: 2px solid rgba(245, 215, 110, 0.35);
-  position: relative;
-  display: grid;
-  place-items: center;
+.nearby-pings .panel-title {
+  margin-top: 16px;
 }
 
-.radar::before,
-.radar::after {
-  content: "";
-  position: absolute;
-  inset: 12px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 107, 53, 0.45);
-  animation: ping 2.4s ease-out infinite;
+.about-open {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  padding: 0 14px;
+  border: 1px solid rgba(243, 234, 216, 0.1);
+  border-radius: 14px;
+  background: #1b1714;
+  color: var(--paper);
+  font-weight: 600;
+  text-align: left;
 }
 
-.radar::after {
-  inset: 24px;
-  animation-delay: 0.8s;
-}
-
-.radar .dot {
-  width: 10px;
-  height: 10px;
-  background: var(--ember);
-  border-radius: 50%;
-  z-index: 1;
-}
-
-@keyframes ping {
-  0% {
-    transform: scale(0.7);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1.35);
-    opacity: 0;
-  }
+.about-open::after {
+  content: "›";
+  color: var(--muted);
+  font-size: 1.35rem;
+  line-height: 1;
 }
 
 .code {
@@ -848,12 +977,195 @@ img {
   color: var(--electric);
 }
 
-@media (min-width: 720px) {
-  .app {
-    margin: 24px auto;
-    min-height: calc(100dvh - 48px);
-    border-radius: 28px;
-    border: 1px solid rgba(243, 234, 216, 0.08);
-    box-shadow: var(--shadow);
+/* Slab phones (about 360x740), including a 3-button nav inset. */
+@media (max-width: 480px) and (max-height: 780px) {
+  .topbar {
+    padding-top: calc(6px + var(--inset-top));
+    padding-bottom: 2px;
+  }
+
+  .brand {
+    font-size: 1.4rem;
+  }
+
+  .brand-mark {
+    width: 1.65rem;
+    height: 1.65rem;
+  }
+
+  .tag {
+    font-size: 0.72rem;
+  }
+
+  .panel-title {
+    font-size: 1.2rem;
+    margin: 2px 0;
+  }
+
+  .lede {
+    font-size: 0.86rem;
+    margin-bottom: 8px;
+  }
+
+  .first-run {
+    padding: 12px 12px 10px;
+    margin-bottom: 10px;
+  }
+
+  .first-run h3 {
+    font-size: 1.05rem;
+    margin-bottom: 4px;
+  }
+
+  .first-run p {
+    font-size: 0.86rem;
+    margin-bottom: 6px;
+  }
+
+  .empty {
+    padding: 16px 12px;
+  }
+
+  .you-card,
+  .checkin-card {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .field {
+    padding: 10px 12px;
+  }
+
+  .fab-row {
+    margin-top: 10px;
+  }
+
+  .photo-row .avatar.lg,
+  .avatar.lg {
+    width: 72px;
+    height: 72px;
+  }
+
+  .invite-launch,
+  .about-open {
+    margin-top: 8px;
+  }
+}
+
+/* Fold cover is a little narrower than a slab and much taller. */
+@media (max-width: 359px) {
+  .topbar {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .screen {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .card-grid {
+    gap: 8px;
+  }
+}
+
+/* Fold open, and any window wide enough to use the inner display. */
+@media (min-width: 600px) {
+  :root {
+    --shell: 880px;
+  }
+
+  .topbar {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .screen {
+    padding-left: 28px;
+    padding-right: 28px;
+  }
+
+  .card-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .lede,
+  .first-run p,
+  .nearby-lede {
+    max-width: 62ch;
+  }
+
+  .nearby-fit {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 22px;
+    align-items: stretch;
+  }
+
+  .nearby-pings {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nearby-pings .empty,
+  .nearby-pings .match-list {
+    flex: 1;
+  }
+
+  .nearby-pings .empty {
+    display: grid;
+    place-items: center;
+    min-height: 160px;
+  }
+
+  .nearby-title,
+  .nearby-lede {
+    grid-column: 1 / -1;
+  }
+
+  .nearby-pings .panel-title {
+    margin-top: 0;
+  }
+
+  .you-actions .invite-launch {
+    margin-top: 0;
+  }
+
+  .you-pane {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.8fr);
+    column-gap: 22px;
+    align-items: start;
+  }
+
+  .you-pane > .panel-title,
+  .you-pane > .lede {
+    grid-column: 1 / -1;
+  }
+
+  .you-actions .panel-title {
+    margin-top: 0;
+  }
+}
+
+/* Fold open in landscape is shorter than a slab. Keep the bar pinned. */
+@media (min-width: 600px) and (max-height: 720px) {
+  .topbar {
+    padding-top: calc(6px + var(--inset-top));
+    padding-bottom: 2px;
+  }
+
+  .panel-title {
+    font-size: 1.2rem;
+    margin: 2px 0;
+  }
+
+  .lede {
+    margin-bottom: 8px;
+  }
+
+  .empty {
+    padding: 14px 12px;
   }
 }

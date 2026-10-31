@@ -2,7 +2,7 @@
   "id": "/",
   "name": "TableTrade",
   "short_name": "TableTrade",
-  "description": "Pokémon trades here, now. Have and want lists, and pings close by.",
+  "description": "TableTrade. Trade Pokémon cards with someone nearby.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

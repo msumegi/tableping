@@ -1,6 +1,8 @@
+import { Capacitor } from "@capacitor/core";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Card, MatchSource, Presence, Settings, Tab, TradeMatch } from "./types";
 import { AddCardSheet } from "./AddCardSheet";
+import { InviteSheet } from "./InviteSheet";
 import { ProfilePhotoSheet } from "./ProfilePhotoSheet";
 import {
   loadHave,
@@ -40,7 +42,6 @@ import {
   SITE_PRIVACY,
   HELP_MAIL,
   COMPANY,
-  BUILT_BY,
   WANT_LEDE,
   YOU_LEDE,
   YOU_PHOTO_HINT,
@@ -54,7 +55,9 @@ import {
   HEAR_AGAIN,
   REPORT_PEER,
   MATCH_PRINTING,
+  APP_TAGLINE,
 } from "./lib/copy";
+import { INVITE_BUTTON } from "./lib/invite";
 import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
 import { kindLabel, matchAgainst, sourceLabel } from "./lib/match";
 import { compressProfilePhoto, initialsFromName } from "./lib/photo";
@@ -62,10 +65,10 @@ import { connectLocalHub } from "./lib/presence";
 import { canUsePhoneNearby, startPhoneNearby, updatePhoneNearby } from "./lib/bleNearby";
 
 const TABS: { id: Tab; ico: string; lbl: string }[] = [
-  { id: "have", ico: "▣", lbl: "Have" },
+  { id: "have", ico: "▢", lbl: "Have" },
   { id: "want", ico: "☆", lbl: "Want" },
   { id: "nearby", ico: "◎", lbl: "Nearby" },
-  { id: "you", ico: "●", lbl: "You" },
+  { id: "you", ico: "○", lbl: "You" },
 ];
 
 export default function App() {
@@ -81,6 +84,8 @@ export default function App() {
   const [matches, setMatches] = useState<TradeMatch[]>([]);
   const [activePing, setActivePing] = useState<TradeMatch | null>(null);
   const [showPhoto, setShowPhoto] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [seedNote, setSeedNote] = useState("");
 
   const [ageBlocked, setAgeBlocked] = useState(false);
@@ -251,11 +256,14 @@ export default function App() {
       <header className="topbar">
         <div>
           <h1 className="brand" aria-label="TableTrade">
-            Table<span>Trade</span>
+            <img className="brand-mark" src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" />
+            <span className="brand-name">
+              Table<span>Trade</span>
+            </span>
           </h1>
-          <p className="tag">Pokémon trades here, now. Close by.</p>
+          <p className="tag">{APP_TAGLINE}</p>
         </div>
-        {activePing ? <span className="pill ok">Ping</span> : <span className="pill">{settings.displayName}</span>}
+        {activePing ? <span className="pill ok">Ping</span> : null}
       </header>
 
       <main className="screen">
@@ -265,7 +273,7 @@ export default function App() {
             lede={HAVE_LEDE}
             cards={have}
             empty="Nothing yet. Add a card you’d trade."
-            intro={have.length === 0 ? <HaveFirstRun showInstall={!isStandalonePwa()} /> : null}
+            intro={have.length === 0 ? <HaveFirstRun showInstall={!isNativeApp() && !isStandalonePwa()} /> : null}
             onAdd={() => setAddingFor("have")}
             onRemove={(id) => setHave((prev) => removeCard(prev, id))}
           />
@@ -296,12 +304,16 @@ export default function App() {
             onDemo={fireDemo}
             onHearAgain={hearAgain}
             onOpenPing={setActivePing}
+            onInvite={() => setShowInvite(true)}
           />
         )}
         {tab === "you" && (
           <YouPane
             settings={settings}
             installed={isStandalonePwa()}
+            native={isNativeApp()}
+            onInvite={() => setShowInvite(true)}
+            onOpenAbout={() => setShowAbout(true)}
             onName={(displayName) => remember({ ...settings, displayName })}
             onLookingNote={(lookingNote) => remember({ ...settings, lookingNote })}
             onOpenPhoto={() => setShowPhoto(true)}
@@ -333,6 +345,8 @@ export default function App() {
       {activePing && (
         <PingSheet match={activePing} onClose={() => setActivePing(null)} onBlock={blockPeer} />
       )}
+      {showAbout ? <AboutSheet onClose={() => setShowAbout(false)} /> : null}
+      {showInvite ? <InviteSheet onClose={() => setShowInvite(false)} /> : null}
       {showPhoto ? (
         <ProfilePhotoSheet
           onClose={() => setShowPhoto(false)}
@@ -382,7 +396,7 @@ function ListPane({
               <button className="x" aria-label={`Remove ${card.name}`} onClick={() => onRemove(card.id)}>
                 ×
               </button>
-              <img src={card.image} alt={card.name} />
+              {card.image ? <img src={card.image} alt={card.name} /> : <div className="card-blank" aria-hidden />}
               <figcaption>
                 <div className="name">{card.name}</div>
                 <div className="meta">
@@ -414,6 +428,7 @@ function NearbyPane({
   onDemo,
   onHearAgain,
   onOpenPing,
+  onInvite,
 }: {
   settings: Settings;
   live: boolean;
@@ -429,19 +444,14 @@ function NearbyPane({
   onDemo: () => void;
   onHearAgain: () => void;
   onOpenPing: (m: TradeMatch) => void;
+  onInvite: () => void;
 }) {
   return (
-    <section>
-      <div className="nearby-hero">
-        <div className="radar" aria-hidden>
-          <span className="dot" />
-        </div>
-        <h2>Trade here, now.</h2>
-        <p className="lede" style={{ color: "rgba(243,234,216,0.78)" }}>
-          {NEARBY_LEDE}
-        </p>
-      </div>
+    <section className="nearby-fit">
+      <h2 className="panel-title nearby-title">Trade here, now.</h2>
+      <p className="lede nearby-lede">{NEARBY_LEDE}</p>
 
+      <div className="nearby-main">
       <div className="you-card stack checkin-card">
         {looking ? (
           <>
@@ -461,7 +471,6 @@ function NearbyPane({
               id="here-note"
               className="field"
               maxLength={HERE_NOTE_MAX}
-              placeholder={HERE_NOTE_HINT}
               value={settings.lookingNote ?? ""}
               onChange={(e) => onLookingNote(e.target.value.slice(0, HERE_NOTE_MAX))}
             />
@@ -483,6 +492,10 @@ function NearbyPane({
         )}
       </div>
 
+      <button className="btn secondary full invite-launch" type="button" onClick={onInvite}>
+        {INVITE_BUTTON}
+      </button>
+
       {import.meta.env.DEV ? (
         <button className="btn ember full demo-after-checkin" onClick={onDemo}>
           See a demo ping now
@@ -490,8 +503,10 @@ function NearbyPane({
       ) : null}
       {seedNote ? <p className="hint">{seedNote}</p> : null}
       <p className="hint">{MATCH_PRINTING}</p>
+      </div>
 
-      <h3 className="panel-title" style={{ marginTop: 18 }}>
+      <div className="nearby-pings">
+      <h3 className="panel-title">
         Pings
       </h3>
       {matches.length === 0 ? (
@@ -518,6 +533,7 @@ function NearbyPane({
           {HEAR_AGAIN}
         </button>
       ) : null}
+      </div>
     </section>
   );
 }
@@ -525,24 +541,30 @@ function NearbyPane({
 function YouPane({
   settings,
   installed,
+  native,
   onName,
   onLookingNote,
   onOpenPhoto,
   onClearPhoto,
   onDemoMode,
   onDemo,
+  onInvite,
+  onOpenAbout,
 }: {
   settings: Settings;
   installed: boolean;
+  native: boolean;
   onName: (name: string) => void;
   onLookingNote: (note: string) => void;
   onOpenPhoto: () => void;
   onClearPhoto: () => void;
   onDemoMode: (on: boolean) => void;
   onDemo: () => void;
+  onInvite: () => void;
+  onOpenAbout: () => void;
 }) {
   return (
-    <section>
+    <section className="you-pane">
       <h2 className="panel-title">You</h2>
       <p className="lede">{YOU_LEDE}</p>
       <div className="you-card stack">
@@ -563,7 +585,6 @@ function YouPane({
           id="you-here-note"
           className="field"
           maxLength={HERE_NOTE_MAX}
-          placeholder={HERE_NOTE_HINT}
           value={settings.lookingNote ?? ""}
           onChange={(e) => onLookingNote(e.target.value.slice(0, HERE_NOTE_MAX))}
         />
@@ -599,45 +620,64 @@ function YouPane({
           </>
         ) : null}
       </div>
-      <h3 className="panel-title">What this is</h3>
-      <p className="lede">{YOU_WHAT}</p>
-      <ul className="privacy-lines">
-        <li>{PRIVACY_LISTS}</li>
-        <li>{PRIVACY_PING}</li>
-        <li>{PRIVACY_FAN}</li>
-      </ul>
-      <p className="hint">
-        A product of {COMPANY}. {BUILT_BY}.
-      </p>
-      <ul className="privacy-lines">
-        <li>
-          <a href={SITE_APP_PAGE}>About TableTrade</a>
-        </li>
-        <li>
-          <a href={SITE_HOME}>{COMPANY}</a>
-        </li>
-        <li>
-          <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>
-        </li>
-        <li>
-          <a href={SITE_PRIVACY}>Privacy</a>
-        </li>
-      </ul>
-      <h3 className="panel-title">{INSTALL_HEADING}</h3>
-      {installed ? (
-        <p className="lede">On your home screen. {INSTALL_NO_ACCOUNT}</p>
-      ) : (
-        <div className="you-card stack">
-          <p className="hint">{INSTALL_NO_ACCOUNT}</p>
-          <p className="lede" style={{ margin: 0 }}>
-            {INSTALL_IPHONE}
-          </p>
-          <p className="lede" style={{ margin: 0 }}>
-            {INSTALL_ANDROID}
-          </p>
-        </div>
+      <div className="you-actions">
+      <button className="btn secondary full invite-launch" type="button" onClick={onInvite}>
+        {INVITE_BUTTON}
+      </button>
+      <button className="about-open" type="button" onClick={onOpenAbout}>
+        About TableTrade
+      </button>
+      {native ? null : (
+        <>
+          <h3 className="panel-title">{INSTALL_HEADING}</h3>
+          {installed ? (
+            <p className="lede">TableTrade is on your home screen. {INSTALL_NO_ACCOUNT}</p>
+          ) : (
+            <div className="you-card stack">
+              <p className="lede" style={{ margin: 0 }}>
+                {INSTALL_NO_ACCOUNT}
+              </p>
+              <p className="lede" style={{ margin: 0 }}>
+                {INSTALL_IPHONE}
+              </p>
+              <p className="lede" style={{ margin: 0 }}>
+                {INSTALL_ANDROID}
+              </p>
+            </div>
+          )}
+        </>
       )}
+      </div>
     </section>
+  );
+}
+
+function AboutSheet({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="search-sheet" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="grab" />
+        <h2 className="panel-title">What this is</h2>
+        <p className="lede">{YOU_WHAT}</p>
+        <div className="plain-lines">
+          <p>{PRIVACY_LISTS}</p>
+          <p>{PRIVACY_PING}</p>
+          <p>{PRIVACY_FAN}</p>
+        </div>
+        <div className="link-rows">
+          <a href={SITE_APP_PAGE}>About TableTrade</a>
+          <a href={SITE_HOME}>{COMPANY}</a>
+          <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>
+          <a href={SITE_PRIVACY}>Privacy</a>
+        </div>
+        <p className="product-foot">A product of {COMPANY}.</p>
+        <div className="sheet-actions">
+          <button className="btn secondary full" type="button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -714,6 +754,10 @@ function HaveFirstRun({ showInstall }: { showInstall: boolean }) {
       ) : null}
     </div>
   );
+}
+
+function isNativeApp(): boolean {
+  return Capacitor.isNativePlatform();
 }
 
 function isStandalonePwa(): boolean {

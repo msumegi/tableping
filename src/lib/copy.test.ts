@@ -25,6 +25,7 @@ import {
   SITE_HOME,
   WANT_LEDE,
   YOU_LEDE,
+  YOU_PHOTO_HINT,
   YOU_WHAT,
 } from "./copy";
 
@@ -34,7 +35,7 @@ const copySrc = readFileSync(join(root, "src/lib/copy.ts"), "utf8");
 
 describe("check-in hint", () => {
   it("shows the quiet line when you have not checked in", () => {
-    expect(checkInHint(false)).toBe("Your phone stays quiet. The app is off.");
+    expect(checkInHint(false)).toBe("You are not looking, so this phone stays quiet.");
   });
 
   it("says you are looking after check-in", () => {
@@ -45,7 +46,7 @@ describe("check-in hint", () => {
 describe("join and first-run copy", () => {
   it("echoes the site how-it-works on empty Have, with looking as the join", () => {
     const text = `${HAVE_FIRST_RUN_TITLE} ${HAVE_FIRST_RUN_BODY} ${HAVE_FIRST_RUN_PRIVACY}`;
-    expect(HAVE_FIRST_RUN_TITLE).toBe("Here. Close by.");
+    expect(HAVE_FIRST_RUN_TITLE).toBe("Trade with someone in the room.");
     expect(HAVE_FIRST_RUN_BODY).toMatch(/I’m looking/);
     expect(HAVE_FIRST_RUN_BODY).toMatch(/lists overlap/);
     expect(HAVE_FIRST_RUN_BODY).toMatch(/Then you talk/);
@@ -75,7 +76,7 @@ describe("join and first-run copy", () => {
   });
 
   it("echoes the site FAQ for install and account", () => {
-    expect(INSTALL_NO_ACCOUNT).toBe("No. Lists live on the phone. No password.");
+    expect(INSTALL_NO_ACCOUNT).toBe("There is no account. Your lists stay on this phone.");
     expect(INSTALL_IPHONE).toMatch(/Safari/);
     expect(INSTALL_IPHONE).toMatch(/Share/);
     expect(INSTALL_IPHONE).toMatch(/Add to Home Screen/);
@@ -84,10 +85,11 @@ describe("join and first-run copy", () => {
   });
 
   it("echoes site privacy and strengths-only product lines", () => {
-    expect(HAVE_LEDE).toBe("Cards you’d trade here, now.");
-    expect(WANT_LEDE).toBe("What you’re hunting.");
-    expect(YOU_LEDE).toMatch(/Lists live on the phone/);
-    expect(YOU_WHAT).toBe("Pokémon trades close by. Match, then talk.");
+    expect(HAVE_LEDE).toMatch(/cards you would trade/i);
+    expect(WANT_LEDE).toMatch(/cards you want/i);
+    expect(YOU_LEDE).toMatch(/stay on this phone/);
+    expect(YOU_WHAT).toMatch(/Trade Pokémon cards with someone nearby/);
+    expect(YOU_WHAT).toMatch(/talk/);
     expect(PRIVACY_LISTS).toMatch(/I’m looking/);
     expect(PRIVACY_PING).toMatch(/ping/i);
     expect(PRIVACY_FAN).toBe("TableTrade is an unofficial fan tool.");
@@ -97,10 +99,13 @@ describe("join and first-run copy", () => {
     expect(COMPANY).toBe("Range Road Technologies");
     expect(HELP_MAIL).toBe("help@rangeroadtech.com");
     expect(SITE_HOME).toBe("https://rangeroadtech.com/");
-    expect(SITE_APP_PAGE).toContain("rangeroadtech.com/apps/tabletrade");
+    expect(SITE_APP_PAGE).toBe("https://rangeroadtech.com/apps/tabletrade/?from=app");
     expect(app).toContain("SITE_HOME");
     expect(app).toContain("HELP_MAIL");
-    expect(app).toContain("BUILT_BY");
+    expect(app).toContain("A product of {COMPANY}.");
+    expect(app).not.toContain("BUILT_BY");
+    expect(app).not.toMatch(/Matthew Sumegi/);
+    expect(YOU_PHOTO_HINT).toBe("A face they can spot in the room. Optional. Not sent while looking.");
   });
 
   it("keeps player-facing copy free of Tinder and we-don’t-do lists", () => {

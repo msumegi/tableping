@@ -4,7 +4,9 @@ import { POKEMON_SPECIES } from "./pokemonNames";
 import { normalizeName, rankByCollectorNumber } from "./scanMatch";
 
 const POKEMON_TCG = "https://api.pokemontcg.io/v2";
-const SEARCH_TIMEOUT_MS = 8000;
+const TCGDEX = "https://api.tcgdex.net/v2/en";
+const TCGDEX_ID_PREFIX = "tcgdex:";
+const SEARCH_TIMEOUT_MS = 6000;
 
 /** Shown when the live catalog is down and the name is not in the local list. */
 export const SEARCH_UNAVAILABLE =
@@ -58,6 +60,54 @@ type PtcgCard = {
   set?: { name?: string; id?: string };
   images?: { small?: string; large?: string };
 };
+
+type TcgdexCard = {
+  id?: string;
+  localId?: string | number;
+  name?: string;
+  image?: string;
+  set?: { id?: string; name?: string };
+};
+
+let tcgdexSetNames: Map<string, string> | null = null;
+
+function tcgdexSetId(id: string, localId: string): string {
+  const suffix = `-${localId}`;
+  if (localId && id.endsWith(suffix)) return id.slice(0, -suffix.length);
+  const cut = id.lastIndexOf("-");
+  return cut > 0 ? id.slice(0, cut) : id;
+}
+
+function tcgdexThumb(base: string): string {
+  return `${base.replace(/\/+$/, "")}/low.webp`;
+}
+
+function fromTcgdex(raw: TcgdexCard, sets: Map<string, string>): Card | null {
+  if (!raw.id || !raw.name || !raw.image) return null;
+  const localId = raw.localId == null ? "" : String(raw.localId);
+  const setId = raw.set?.id || tcgdexSetId(raw.id, localId);
+  return {
+    id: `${TCGDEX_ID_PREFIX}${raw.id}`,
+    name: raw.name,
+    image: tcgdexThumb(raw.image),
+    setName: raw.set?.name || sets.get(setId) || "",
+    number: localId,
+  };
+}
+
+async function loadTcgdexSetNames(): Promise<Map<string, string>> {
+  if (tcgdexSetNames) return tcgdexSetNames;
+  const res = await fetchWithTimeout(`${TCGDEX}/sets`);
+  if (!res.ok) throw new Error(`TCGdex sets failed (${res.status})`);
+  const body = (await res.json()) as { id?: string; name?: string }[];
+  if (!Array.isArray(body)) throw new Error("TCGdex sets returned an unexpected response");
+  const map = new Map<string, string>();
+  for (const set of body) {
+    if (set?.id && set?.name) map.set(set.id, set.name);
+  }
+  tcgdexSetNames = map;
+  return map;
+}
 
 function fromPtcg(raw: PtcgCard): Card | null {
   const image = raw.images?.small || raw.images?.large || "";
@@ -181,27 +231,72 @@ async function searchPokemonTcgApi(query: string): Promise<Card[]> {
   return searchPokemonTcgLucene(luceneCatalogQuery(query));
 }
 
+async function searchTcgdex(query: string): Promise<Card[]> {
+  const parsed = parseCatalogQuery(query);
+  const name = (parsed.name || query).trim();
+  if (name.length < 2) return [];
+  const params = new URLSearchParams({ name });
+  const [sets, res] = await Promise.all([
+    loadTcgdexSetNames(),
+    fetchWithTimeout(`${TCGDEX}/cards?${params}`),
+  ]);
+  if (!res.ok) throw new Error(`TCGdex search failed (${res.status})`);
+  const body = (await res.json()) as TcgdexCard[];
+  if (!Array.isArray(body)) throw new Error("TCGdex search returned an unexpected response");
+  return dedupeCards(body.map((raw) => fromTcgdex(raw, sets)).filter((card): card is Card => card !== null));
+}
+
+function sameCollectorNumber(cardNumber: string, scanned: string): boolean {
+  const key = (raw: string) => {
+    const trimmed = raw.trim();
+    return /^\d+$/.test(trimmed) ? String(parseInt(trimmed, 10)) : trimmed.toLowerCase();
+  };
+  return key(cardNumber) === key(scanned) && key(scanned).length > 0;
+}
+
+function takeMatches(query: string, cards: Card[]): Card[] | null {
+  const matched = cards.filter((card) => cardMatchesQuery(card, query));
+  if (!matched.length) return null;
+  const ranked = rankSearchResults(query, matched).slice(0, 36);
+  rememberCards(query, ranked);
+  return ranked;
+}
+
 /** Match a camera read to printings. Number is used when OCR saw 58/102 (etc). */
 export async function findCardsFromScan(name: string, number?: string): Promise<Card[]> {
   const q = name.trim();
   if (q.length < 2) return [];
+  const num = number && /^\d+$/.test(number.trim()) ? String(parseInt(number.trim(), 10)) : number?.trim();
+  const rank = (cards: Card[]) => rankByCollectorNumber(rankSearchResults(q, cards), number).slice(0, 12);
 
   try {
-    if (number) {
-      const num = /^\d+$/.test(number.trim()) ? String(parseInt(number.trim(), 10)) : number.trim();
+    if (num) {
       try {
-        const precise = await searchPokemonTcgLucene(`${luceneNameQuery(q)} number:${num}`);
-        if (precise.length) return rankByCollectorNumber(rankSearchResults(q, precise), number).slice(0, 12);
+        const live = await searchTcgdex(q);
+        const precise = live.filter((card) => sameCollectorNumber(card.number, num));
+        if (precise.length) return rank(precise);
       } catch {
-        /* name-only next */
+        try {
+          const precise = await searchPokemonTcgLucene(`${luceneNameQuery(q)} number:${num}`);
+          if (precise.length) return rank(precise);
+        } catch {
+          /* name-only next */
+        }
       }
     }
-    const byName = await searchPokemonTcgApi(q);
-    if (byName.length) return rankByCollectorNumber(rankSearchResults(q, byName), number).slice(0, 12);
-    return rankByCollectorNumber(searchLocalCatalog(q), number).slice(0, 12);
+    try {
+      const byName = await searchTcgdex(q);
+      const matched = byName.filter((card) => cardMatchesQuery(card, q));
+      const pool = matched.length ? matched : byName;
+      if (pool.length) return rank(pool);
+    } catch {
+      const byName = await searchPokemonTcgApi(q);
+      if (byName.length) return rank(byName);
+    }
+    return rank(searchLocalCatalog(q));
   } catch {
     const local = searchLocalCatalog(q);
-    if (local.length) return rankByCollectorNumber(local, number).slice(0, 12);
+    if (local.length) return rank(local);
     throw new Error(SEARCH_UNAVAILABLE);
   }
 }
@@ -214,29 +309,26 @@ export async function searchCards(query: string): Promise<Card[]> {
   const cached = cachedCards(q);
 
   try {
-    const remote = await searchPokemonTcgApi(q);
-    const matched = remote.filter((card) => cardMatchesQuery(card, q));
-    if (matched.length) {
-      const ranked = rankSearchResults(q, matched).slice(0, 36);
-      rememberCards(q, ranked);
-      return ranked;
-    }
-    if (parsed.set) {
-      const byName = await searchPokemonTcgLucene(luceneNameQuery(parsed.name));
-      const setHits = byName.filter((card) => cardMatchesQuery(card, q));
-      if (setHits.length) {
-        const ranked = rankSearchResults(q, setHits).slice(0, 36);
-        rememberCards(q, ranked);
-        return ranked;
-      }
-    }
-    if (cached.length) return cached;
-    return local;
+    const remote = await searchTcgdex(q);
+    const hit = takeMatches(q, remote);
+    if (hit) return hit;
   } catch {
-    if (cached.length) return cached;
-    if (local.length) return local;
-    throw new Error(SEARCH_UNAVAILABLE);
+    try {
+      const remote = await searchPokemonTcgApi(q);
+      const hit = takeMatches(q, remote);
+      if (hit) return hit;
+      if (parsed.set) {
+        const byName = await searchPokemonTcgLucene(luceneNameQuery(parsed.name));
+        const widened = takeMatches(q, byName);
+        if (widened) return widened;
+      }
+    } catch {
+      /* local list below */
+    }
   }
+  if (cached.length) return cached;
+  if (local.length) return local;
+  throw new Error(SEARCH_UNAVAILABLE);
 }
 
 export function rankSearchResults(query: string, cards: Card[]): Card[] {
@@ -274,8 +366,27 @@ export function rankSearchResults(query: string, cards: Card[]): Card[] {
 
 export async function hydrateSetName(card: Card): Promise<Card> {
   if (card.setName) return card;
+  if (card.id.startsWith(TCGDEX_ID_PREFIX)) {
+    try {
+      const rawId = card.id.slice(TCGDEX_ID_PREFIX.length);
+      const res = await fetchWithTimeout(`${TCGDEX}/cards/${encodeURIComponent(rawId)}`);
+      if (!res.ok) return card;
+      const body = (await res.json()) as TcgdexCard;
+      const sets = await loadTcgdexSetNames().catch(() => new Map<string, string>());
+      const mapped = fromTcgdex(body, sets);
+      if (!mapped) return card;
+      return {
+        ...card,
+        setName: mapped.setName || card.setName,
+        number: mapped.number || card.number,
+        image: mapped.image || card.image,
+      };
+    } catch {
+      return card;
+    }
+  }
   try {
-    const res = await fetchWithTimeout(`${POKEMON_TCG}/cards/${encodeURIComponent(card.id)}`, 5000);
+    const res = await fetchWithTimeout(`${POKEMON_TCG}/cards/${encodeURIComponent(card.id)}`);
     if (!res.ok) return card;
     const body = (await res.json()) as { data?: PtcgCard };
     const raw = body.data;
