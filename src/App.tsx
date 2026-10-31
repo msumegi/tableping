@@ -85,6 +85,7 @@ export default function App() {
   const [activePing, setActivePing] = useState<TradeMatch | null>(null);
   const [showPhoto, setShowPhoto] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [seedNote, setSeedNote] = useState("");
 
   const [ageBlocked, setAgeBlocked] = useState(false);
@@ -312,6 +313,7 @@ export default function App() {
             installed={isStandalonePwa()}
             native={isNativeApp()}
             onInvite={() => setShowInvite(true)}
+            onOpenAbout={() => setShowAbout(true)}
             onName={(displayName) => remember({ ...settings, displayName })}
             onLookingNote={(lookingNote) => remember({ ...settings, lookingNote })}
             onOpenPhoto={() => setShowPhoto(true)}
@@ -343,6 +345,7 @@ export default function App() {
       {activePing && (
         <PingSheet match={activePing} onClose={() => setActivePing(null)} onBlock={blockPeer} />
       )}
+      {showAbout ? <AboutSheet onClose={() => setShowAbout(false)} /> : null}
       {showInvite ? <InviteSheet onClose={() => setShowInvite(false)} /> : null}
       {showPhoto ? (
         <ProfilePhotoSheet
@@ -444,17 +447,11 @@ function NearbyPane({
   onInvite: () => void;
 }) {
   return (
-    <section>
-      <div className="nearby-hero">
-        <div className="radar" aria-hidden>
-          <span className="dot" />
-        </div>
-        <h2>Trade here, now.</h2>
-        <p className="lede" style={{ color: "rgba(243,234,216,0.78)" }}>
-          {NEARBY_LEDE}
-        </p>
-      </div>
+    <section className="nearby-fit">
+      <h2 className="panel-title nearby-title">Trade here, now.</h2>
+      <p className="lede nearby-lede">{NEARBY_LEDE}</p>
 
+      <div className="nearby-main">
       <div className="you-card stack checkin-card">
         {looking ? (
           <>
@@ -474,7 +471,6 @@ function NearbyPane({
               id="here-note"
               className="field"
               maxLength={HERE_NOTE_MAX}
-              placeholder={HERE_NOTE_HINT}
               value={settings.lookingNote ?? ""}
               onChange={(e) => onLookingNote(e.target.value.slice(0, HERE_NOTE_MAX))}
             />
@@ -507,8 +503,10 @@ function NearbyPane({
       ) : null}
       {seedNote ? <p className="hint">{seedNote}</p> : null}
       <p className="hint">{MATCH_PRINTING}</p>
+      </div>
 
-      <h3 className="panel-title" style={{ marginTop: 18 }}>
+      <div className="nearby-pings">
+      <h3 className="panel-title">
         Pings
       </h3>
       {matches.length === 0 ? (
@@ -535,6 +533,7 @@ function NearbyPane({
           {HEAR_AGAIN}
         </button>
       ) : null}
+      </div>
     </section>
   );
 }
@@ -550,6 +549,7 @@ function YouPane({
   onDemoMode,
   onDemo,
   onInvite,
+  onOpenAbout,
 }: {
   settings: Settings;
   installed: boolean;
@@ -561,9 +561,10 @@ function YouPane({
   onDemoMode: (on: boolean) => void;
   onDemo: () => void;
   onInvite: () => void;
+  onOpenAbout: () => void;
 }) {
   return (
-    <section>
+    <section className="you-pane">
       <h2 className="panel-title">You</h2>
       <p className="lede">{YOU_LEDE}</p>
       <div className="you-card stack">
@@ -584,7 +585,6 @@ function YouPane({
           id="you-here-note"
           className="field"
           maxLength={HERE_NOTE_MAX}
-          placeholder={HERE_NOTE_HINT}
           value={settings.lookingNote ?? ""}
           onChange={(e) => onLookingNote(e.target.value.slice(0, HERE_NOTE_MAX))}
         />
@@ -620,24 +620,13 @@ function YouPane({
           </>
         ) : null}
       </div>
+      <div className="you-actions">
       <button className="btn secondary full invite-launch" type="button" onClick={onInvite}>
         {INVITE_BUTTON}
       </button>
-      <h3 className="panel-title">What this is</h3>
-      <p className="lede">{YOU_WHAT}</p>
-      <div className="plain-lines">
-        <p>{PRIVACY_LISTS}</p>
-        <p>{PRIVACY_PING}</p>
-        <p>{PRIVACY_FAN}</p>
-      </div>
-      <h3 className="panel-title">About</h3>
-      <div className="link-rows">
-        <a href={SITE_APP_PAGE}>About TableTrade</a>
-        <a href={SITE_HOME}>{COMPANY}</a>
-        <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>
-        <a href={SITE_PRIVACY}>Privacy</a>
-      </div>
-      <p className="product-foot">A product of {COMPANY}.</p>
+      <button className="about-open" type="button" onClick={onOpenAbout}>
+        About TableTrade
+      </button>
       {native ? null : (
         <>
           <h3 className="panel-title">{INSTALL_HEADING}</h3>
@@ -658,7 +647,37 @@ function YouPane({
           )}
         </>
       )}
+      </div>
     </section>
+  );
+}
+
+function AboutSheet({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="search-sheet" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="grab" />
+        <h2 className="panel-title">What this is</h2>
+        <p className="lede">{YOU_WHAT}</p>
+        <div className="plain-lines">
+          <p>{PRIVACY_LISTS}</p>
+          <p>{PRIVACY_PING}</p>
+          <p>{PRIVACY_FAN}</p>
+        </div>
+        <div className="link-rows">
+          <a href={SITE_APP_PAGE}>About TableTrade</a>
+          <a href={SITE_HOME}>{COMPANY}</a>
+          <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>
+          <a href={SITE_PRIVACY}>Privacy</a>
+        </div>
+        <p className="product-foot">A product of {COMPANY}.</p>
+        <div className="sheet-actions">
+          <button className="btn secondary full" type="button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -7,13 +7,18 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.webkit.WebView;
+import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.WebViewListener;
 import java.util.Locale;
 
 public class MainActivity extends BridgeActivity {
+    private String safeAreaJs = "";
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(NearbyPlugin.class);
@@ -42,22 +47,42 @@ public class MainActivity extends BridgeActivity {
             publishSafeArea(insets);
             return insets;
         });
+        if (getBridge() != null) {
+            getBridge().addWebViewListener(new WebViewListener() {
+                @Override
+                public void onPageLoaded(WebView view) {
+                    applySafeAreaJs();
+                    view.postDelayed(() -> applySafeAreaJs(), 300);
+                    view.postDelayed(() -> republishFromWindow(), 800);
+                }
+
+                @Override
+                public void onPageCommitVisible(WebView view, String url) {
+                    applySafeAreaJs();
+                }
+            });
+        }
+        ViewCompat.requestApplyInsets(window.getDecorView());
     }
 
     @Override
     public void onResume() {
         super.onResume();
+        republishFromWindow();
+    }
+
+    private void republishFromWindow() {
         WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(getWindow().getDecorView());
         if (insets != null) publishSafeArea(insets);
     }
 
     private void publishSafeArea(WindowInsetsCompat insets) {
-        if (getBridge() == null || getBridge().getWebView() == null) return;
-        androidx.core.graphics.Insets bars = insets.getInsets(
+        Insets bars = insets.getInsets(
             WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
         );
         float density = getResources().getDisplayMetrics().density;
-        String js = String.format(
+        if (density <= 0f) density = 1f;
+        safeAreaJs = String.format(
             Locale.US,
             "document.documentElement.style.setProperty('--safe-top','%.2fpx');" +
                 "document.documentElement.style.setProperty('--safe-right','%.2fpx');" +
@@ -68,6 +93,12 @@ public class MainActivity extends BridgeActivity {
             bars.bottom / density,
             bars.left / density
         );
+        applySafeAreaJs();
+    }
+
+    private void applySafeAreaJs() {
+        if (safeAreaJs.isEmpty() || getBridge() == null || getBridge().getWebView() == null) return;
+        String js = "(function(){try{" + safeAreaJs + "}catch(e){}})();";
         getBridge().getWebView().post(() -> {
             if (getBridge() != null && getBridge().getWebView() != null) {
                 getBridge().getWebView().evaluateJavascript(js, null);
