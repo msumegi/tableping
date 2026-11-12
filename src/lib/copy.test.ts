@@ -20,6 +20,8 @@ import {
   OPEN_LOCATION_SETTINGS,
   BLUETOOTH_OFF_HINT,
   TURN_ON_BLUETOOTH,
+  LISTS_TOO_BIG,
+  OLDER_APP_HINT,
   NEARBY_LEDE,
   PING_HERE,
   PRIVACY_FAN,
@@ -81,6 +83,10 @@ describe("join and first-run copy", () => {
     expect(OPEN_LOCATION_SETTINGS).toBe("Open Location settings");
     expect(BLUETOOTH_OFF_HINT).toMatch(/Turn Bluetooth on/);
     expect(TURN_ON_BLUETOOTH).toBe("Turn on Bluetooth");
+    expect(LISTS_TOO_BIG).toMatch(/too big to send/);
+    expect(OLDER_APP_HINT).toBe("Someone nearby has an older TableTrade. Ask them to update.");
+    expect(app).toContain("OLDER_APP_HINT");
+    expect(app).toContain("LISTS_TOO_BIG");
     expect(HAVE_FIRST_RUN_PRIVACY).toMatch(/encrypted Bluetooth/);
     expect(PRIVACY_LISTS).toMatch(/encrypted Bluetooth/);
     expect(PRIVACY_LISTS).toMatch(/Anyone looking nearby can read them/);

@@ -83,7 +83,9 @@ public class NearbyPlugin extends Plugin {
     private boolean scanStarted = false;
     private PluginCall pendingStart;
     private final Set<String> delivered = new HashSet<>();
+    private final Set<String> ignored = new HashSet<>();
     private final Set<String> inFlight = new HashSet<>();
+    private boolean legacyHintSent = false;
     private final Map<String, BluetoothDevice> candidates = new HashMap<>();
     private final Map<String, ServerSession> sessions = new HashMap<>();
     private final Map<String, Integer> peerMtu = new HashMap<>();
@@ -142,9 +144,14 @@ public class NearbyPlugin extends Plugin {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             if (result == null || result.getDevice() == null) return;
-            byte[] peerToken = tokenFrom(result.getScanRecord());
-            if (peerToken == null) return;
             BluetoothDevice device = result.getDevice();
+            ScanRecord record = result.getScanRecord();
+            byte[] mfg = record == null ? null : record.getManufacturerSpecificData(MFG);
+            byte[] peerToken = BleAdvertisement.tokenFrom(mfg);
+            if (peerToken == null) {
+                if (BleAdvertisement.isLegacy(mfg)) noteLegacy(device.getAddress());
+                return;
+            }
             candidates.put(device.getAddress(), device);
             if (shouldReachOut(peerToken)) {
                 readPeer(device, false);
@@ -157,7 +164,12 @@ public class NearbyPlugin extends Plugin {
     @PluginMethod
     public void start(PluginCall call) {
         String body = call.getString("payload", "{}");
-        payload = body.getBytes(StandardCharsets.UTF_8);
+        byte[] next = body.getBytes(StandardCharsets.UTF_8);
+        if (next.length > BleCrypto.MAX_PLAINTEXT) {
+            call.reject("PAYLOAD_TOO_LARGE", "PAYLOAD_TOO_LARGE");
+            return;
+        }
+        payload = next;
         if (Build.VERSION.SDK_INT >= 31) {
             if (getPermissionState("scan") != PermissionState.GRANTED
                     || getPermissionState("advertise") != PermissionState.GRANTED
@@ -191,7 +203,12 @@ public class NearbyPlugin extends Plugin {
     @PluginMethod
     public void setPayload(PluginCall call) {
         String body = call.getString("payload", "{}");
-        payload = body.getBytes(StandardCharsets.UTF_8);
+        byte[] next = body.getBytes(StandardCharsets.UTF_8);
+        if (next.length > BleCrypto.MAX_PLAINTEXT) {
+            call.reject("PAYLOAD_TOO_LARGE", "PAYLOAD_TOO_LARGE");
+            return;
+        }
+        payload = next;
         call.resolve();
     }
 
@@ -418,16 +435,11 @@ public class NearbyPlugin extends Plugin {
         return true;
     }
 
-    private static byte[] tokenFrom(ScanRecord record) {
-        if (record == null) return null;
-        return BleAdvertisement.tokenFrom(record.getManufacturerSpecificData(MFG));
-    }
-
     @SuppressLint("MissingPermission")
     private void readPeer(BluetoothDevice device, boolean fallback) {
         if (!running || device == null) return;
         final String id = device.getAddress();
-        if (delivered.contains(id) || inFlight.contains(id)) return;
+        if (ignored.contains(id) || delivered.contains(id) || inFlight.contains(id)) return;
         if (!fallback && inFlight.contains(id)) return;
         inFlight.add(id);
         main.postDelayed(() -> inFlight.remove(id), 8000);
@@ -513,11 +525,12 @@ public class NearbyPlugin extends Plugin {
                             serverPub[0] = BleCrypto.serverPublicFromHandshake(value);
                             byte[] frame = BleCrypto.sealClientToServer(mine, serverPub[0], payload);
                             if (frame.length > BleCrypto.MAX_FRAME) {
-                                fail(gatt, "encrypted frame exceeds MTU 517 budget; refusing plaintext fallback");
+                                notifyTooBig();
+                                fail(gatt, "encrypted frame exceeds 2 KB ceiling; refusing plaintext fallback");
                                 return;
                             }
                             if (!BleCrypto.frameFitsSinglePacket(frame.length, mtu[0])) {
-                                Log.i(TAG, "MTU " + mtu[0] + " is below 517; long-write of " + frame.length + " byte encrypted frame");
+                                Log.i(TAG, "sending " + frame.length + " byte encrypted frame in pieces (MTU " + mtu[0] + ")");
                             }
                             if (!writeFrame(gatt, characteristic, frame)) {
                                 fail(gatt, "encrypted write failed at MTU " + mtu[0] + "; not sending plaintext");
@@ -533,6 +546,12 @@ public class NearbyPlugin extends Plugin {
                         if (clientKeys == mine) clientKeys = null;
                         gatt.disconnect();
                     } catch (BleCrypto.Rejected e) {
+                        if (BleCrypto.isLegacyPayload(e.getMessage())) {
+                            noteLegacy(id);
+                            fail(gatt, "ignoring older TableTrade: " + e.getMessage());
+                            return;
+                        }
+                        if (e.getMessage() != null && e.getMessage().contains("2 KB")) notifyTooBig();
                         fail(gatt, "rejecting nearby payload: " + e.getMessage());
                     }
                 }
@@ -693,6 +712,7 @@ public class NearbyPlugin extends Plugin {
             } catch (BleCrypto.Rejected e) {
                 s.reply = null;
                 s.open = false;
+                if (e.getMessage() != null && e.getMessage().contains("2 KB")) notifyTooBig();
                 Log.w(TAG, "not sending plaintext reply: " + e.getMessage());
                 s.keys.zeroize();
                 return false;
@@ -701,9 +721,36 @@ public class NearbyPlugin extends Plugin {
             s.keys.zeroize();
             return true;
         } catch (BleCrypto.Rejected e) {
-            Log.w(TAG, "rejecting nearby payload: " + e.getMessage());
+            if (BleCrypto.isLegacyPayload(e.getMessage())) {
+                noteLegacy(device.getAddress());
+                Log.w(TAG, "ignoring older TableTrade: " + e.getMessage());
+            } else {
+                Log.w(TAG, "rejecting nearby payload: " + e.getMessage());
+            }
             return false;
         }
+    }
+
+    /** Log once per address, tell the UI once, and do not connect again. */
+    private void noteLegacy(String address) {
+        boolean first = address == null || ignored.add(address);
+        if (address != null) {
+            candidates.remove(address);
+            inFlight.remove(address);
+        }
+        if (!first) return;
+        Log.w(TAG, "ignoring older TableTrade" + (address == null ? "" : " at " + address) + "; not retrying");
+        if (legacyHintSent || !running) return;
+        legacyHintSent = true;
+        JSObject ev = new JSObject();
+        ev.put("code", "LEGACY_PEER");
+        notifyListeners("status", ev);
+    }
+
+    private void notifyTooBig() {
+        JSObject ev = new JSObject();
+        ev.put("code", "PAYLOAD_TOO_LARGE");
+        notifyListeners("status", ev);
     }
 
     private ServerSession session(String address) {
@@ -780,6 +827,8 @@ public class NearbyPlugin extends Plugin {
         }
         peerMtu.clear();
         delivered.clear();
+        ignored.clear();
+        legacyHintSent = false;
         inFlight.clear();
         candidates.clear();
     }

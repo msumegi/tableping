@@ -54,6 +54,8 @@ public class NearbyStartGateTest {
 
         byte[] v1 = new byte[] { 'T', 'T', 1, 2, 3, 4 };
         assertNull(BleAdvertisement.tokenFrom(v1));
+        assertTrue(BleAdvertisement.isLegacy(v1));
+        assertFalse(BleAdvertisement.isLegacy(mfg));
 
         String userId = "12345678-1234-1234-1234-123456789abc";
         byte[] legacy = legacyUserHash(userId);

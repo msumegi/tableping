@@ -8,7 +8,10 @@ type NearbyNative = {
   stop(): Promise<void>;
   openLocationSettings(): Promise<void>;
   requestEnableBluetooth(): Promise<void>;
-  addListener(eventName: "peer", listener: (ev: { payload: string }) => void): Promise<PluginListenerHandle>;
+  addListener(
+    eventName: "peer" | "status",
+    listener: (ev: { payload?: string; code?: string }) => void,
+  ): Promise<PluginListenerHandle>;
 };
 
 const native = registerPlugin<NearbyNative>("TableTradeNearby");
@@ -16,7 +19,7 @@ const native = registerPlugin<NearbyNative>("TableTradeNearby");
 /**
  * v2 wire frame, matching BleCrypto.java:
  * version (1) + uncompressed P-256 key (65) + nonce (12) + AES-GCM ciphertext and tag (plaintext + 16).
- * ATT payload at MTU 517 is 514 bytes, so the profile JSON must stay within 420 bytes.
+ * A frame bigger than one ATT packet is split and reassembled. The hard ceiling is 2 KB.
  */
 export const BLE_PROTOCOL_VERSION = 2;
 export const BLE_PUBKEY_LEN = 65;
@@ -26,7 +29,8 @@ export const BLE_VERSION_LEN = 1;
 export const BLE_FRAME_OVERHEAD = BLE_VERSION_LEN + BLE_PUBKEY_LEN + BLE_NONCE_LEN + BLE_TAG_LEN;
 export const BLE_TARGET_MTU = 517;
 export const BLE_ATT_HEADER = 3;
-export const BLE_MAX_FRAME = BLE_TARGET_MTU - BLE_ATT_HEADER;
+export const BLE_SINGLE_PACKET = BLE_TARGET_MTU - BLE_ATT_HEADER;
+export const BLE_MAX_FRAME = 2048;
 export const BLE_MAX_PLAINTEXT = BLE_MAX_FRAME - BLE_FRAME_OVERHEAD;
 
 export function nearbyFrameLength(plaintextBytes: number): number {
@@ -34,7 +38,17 @@ export function nearbyFrameLength(plaintextBytes: number): number {
 }
 
 export function plaintextFitsTargetMtu(plaintextBytes: number): boolean {
+  return plaintextBytes >= 0 && nearbyFrameLength(plaintextBytes) <= BLE_SINGLE_PACKET;
+}
+
+export function plaintextFitsCeiling(plaintextBytes: number): boolean {
   return plaintextBytes >= 0 && nearbyFrameLength(plaintextBytes) <= BLE_MAX_FRAME;
+}
+
+export function payloadTooLarge(err: unknown): boolean {
+  const code = readField(err, "code");
+  const message = err instanceof Error ? err.message : readField(err, "message");
+  return `${code}\n${message}`.includes("PAYLOAD_TOO_LARGE");
 }
 
 export type NearbyBlock = "location" | "bluetooth";
@@ -84,23 +98,18 @@ function utf8Bytes(s: string): number {
 }
 
 export function encodeNearbyPayload(p: Presence): string {
-  let haveN = 12;
-  let wantN = 12;
-  const pack = (have: number, want: number) =>
-    JSON.stringify({
-      userId: p.userId,
-      name: (p.name || "Trainer").slice(0, 24),
-      note: p.note?.slice(0, 40),
-      have: cardIds(p.have, have),
-      want: cardIds(p.want, want),
-      ts: p.ts,
-    });
-  let raw = pack(haveN, wantN);
-  while (utf8Bytes(raw) > BLE_MAX_PLAINTEXT && (haveN > 0 || wantN > 0)) {
-    if (haveN >= wantN && haveN > 0) haveN -= 1;
-    else if (wantN > 0) wantN -= 1;
-    else break;
-    raw = pack(haveN, wantN);
+  const raw = JSON.stringify({
+    userId: p.userId,
+    name: (p.name || "Trainer").slice(0, 24),
+    note: p.note?.slice(0, 40),
+    have: cardIds(p.have, 12),
+    want: cardIds(p.want, 12),
+    ts: p.ts,
+  });
+  if (utf8Bytes(raw) > BLE_MAX_PLAINTEXT) {
+    const err = new Error("PAYLOAD_TOO_LARGE");
+    (err as Error & { code?: string }).code = "PAYLOAD_TOO_LARGE";
+    throw err;
   }
   return raw;
 }
@@ -158,19 +167,25 @@ export function decodeNearbyPayload(raw: string): Presence | null {
 export async function startPhoneNearby(
   presence: Presence,
   onPeer: (peer: Presence) => void,
+  onStatus?: (code: string) => void,
 ): Promise<() => void> {
-  const handle = await native.addListener("peer", (ev) => {
+  const peerHandle = await native.addListener("peer", (ev) => {
     const peer = decodeNearbyPayload(ev.payload || "");
     if (peer) onPeer(peer);
+  });
+  const statusHandle = await native.addListener("status", (ev) => {
+    if (ev.code) onStatus?.(ev.code);
   });
   try {
     await native.start({ payload: encodeNearbyPayload(presence), userId: presence.userId });
   } catch (err) {
-    await handle.remove();
+    await peerHandle.remove();
+    await statusHandle.remove();
     throw err;
   }
   return () => {
-    void handle.remove();
+    void peerHandle.remove();
+    void statusHandle.remove();
     void native.stop();
   };
 }

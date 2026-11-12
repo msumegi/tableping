@@ -26,4 +26,9 @@ public final class BleAdvertisement {
         System.arraycopy(mfg, 2, token, 0, 4);
         return token;
     }
+
+    /** Version 1 ads start with 'TT'. They are not a peer we can read. */
+    public static boolean isLegacy(byte[] mfg) {
+        return mfg != null && mfg.length >= 2 && mfg[0] == 'T' && mfg[1] == 'T';
+    }
 }

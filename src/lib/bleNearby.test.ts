@@ -4,11 +4,13 @@ import {
   BLE_MAX_FRAME,
   BLE_MAX_PLAINTEXT,
   BLE_PROTOCOL_VERSION,
-  BLE_TARGET_MTU,
+  BLE_SINGLE_PACKET,
   decodeNearbyPayload,
   encodeNearbyPayload,
   nearbyBlockFromError,
   nearbyFrameLength,
+  payloadTooLarge,
+  plaintextFitsCeiling,
   plaintextFitsTargetMtu,
 } from "./bleNearby";
 import type { Card, Presence } from "../types";
@@ -39,30 +41,51 @@ describe("nearby payload", () => {
     expect(new TextEncoder().encode(raw).length).toBeLessThanOrEqual(BLE_MAX_PLAINTEXT);
   });
 
-  it("frames v2 inside the MTU 517 budget at max name, note, and card counts", () => {
+  it("sends every card at max name, note, and 12 + 12 long ids", () => {
     expect(BLE_PROTOCOL_VERSION).toBe(2);
-    expect(BLE_FRAME_OVERHEAD).toBe(1 + 65 + 12 + 16);
-    expect(BLE_MAX_FRAME).toBe(BLE_TARGET_MTU - 3);
-    expect(BLE_MAX_PLAINTEXT).toBe(420);
+    expect(BLE_FRAME_OVERHEAD).toBe(94);
+    expect(BLE_SINGLE_PACKET).toBe(514);
+    expect(BLE_MAX_FRAME).toBe(2048);
+    expect(BLE_MAX_PLAINTEXT).toBe(2048 - 94);
+    const have = Array.from({ length: 12 }, (_, i) => card(`swsh12pt5gg-GG${String(i).padStart(2, "0")}`));
+    const want = Array.from({ length: 12 }, (_, i) => card(`sv8pt5-${200 + i}`));
     const max: Presence = {
       userId: "12345678-1234-1234-1234-123456789abc",
       name: "N".repeat(24),
       note: "O".repeat(40),
-      have: Array.from({ length: 12 }, (_, i) => card(`swsh12pt5gg-GG${String(i).padStart(2, "0")}`)),
-      want: Array.from({ length: 12 }, (_, i) => card(`sv8pt5-${200 + i}`)),
+      have,
+      want,
       ts: 1_731_400_000_000,
     };
     const raw = encodeNearbyPayload(max);
     const bytes = new TextEncoder().encode(raw).length;
-    expect(plaintextFitsTargetMtu(bytes)).toBe(true);
-    expect(nearbyFrameLength(bytes)).toBe(bytes + 94);
+    expect(plaintextFitsCeiling(bytes)).toBe(true);
+    expect(plaintextFitsTargetMtu(bytes)).toBe(false);
+    expect(nearbyFrameLength(bytes)).toBeGreaterThan(BLE_SINGLE_PACKET);
     expect(nearbyFrameLength(bytes)).toBeLessThanOrEqual(BLE_MAX_FRAME);
     const back = decodeNearbyPayload(raw);
     expect(back?.name).toBe("N".repeat(24));
     expect(back?.note).toBe("O".repeat(40));
-    expect(back?.have.length).toBeLessThanOrEqual(12);
-    expect(back?.want.length).toBeLessThanOrEqual(12);
-    expect((back?.have.length ?? 0) + (back?.want.length ?? 0)).toBeGreaterThan(0);
+    expect(back?.have.map((c) => c.id)).toEqual(have.map((c) => c.id));
+    expect(back?.want.map((c) => c.id)).toEqual(want.map((c) => c.id));
+  });
+
+  it("refuses a profile over 2 KB instead of dropping cards", () => {
+    const fat = "x".repeat(200);
+    const over: Presence = {
+      userId: "u",
+      name: "N".repeat(24),
+      note: "O".repeat(40),
+      have: Array.from({ length: 12 }, (_, i) => card(`${fat}${i}`)),
+      want: Array.from({ length: 12 }, (_, i) => card(`${fat}w${i}`)),
+      ts: 1,
+    };
+    expect(() => encodeNearbyPayload(over)).toThrow(/PAYLOAD_TOO_LARGE/);
+    try {
+      encodeNearbyPayload(over);
+    } catch (err) {
+      expect(payloadTooLarge(err)).toBe(true);
+    }
   });
 });
 

@@ -88,6 +88,11 @@ export const BLUETOOTH_OFF_HINT =
 
 export const TURN_ON_BLUETOOTH = "Turn on Bluetooth";
 
+export const LISTS_TOO_BIG =
+  "These lists are too big to send over Bluetooth. Remove a few cards and try again.";
+
+export const OLDER_APP_HINT = "Someone nearby has an older TableTrade. Ask them to update.";
+
 export const HEAR_AGAIN = "Hear pings again";
 
 export const REPORT_PEER = "Don’t show this person";

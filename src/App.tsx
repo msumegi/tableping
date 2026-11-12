@@ -56,6 +56,8 @@ import {
   OPEN_LOCATION_SETTINGS,
   BLUETOOTH_OFF_HINT,
   TURN_ON_BLUETOOTH,
+  LISTS_TOO_BIG,
+  OLDER_APP_HINT,
   HEAR_AGAIN,
   REPORT_PEER,
   MATCH_PRINTING,
@@ -67,6 +69,7 @@ import { connectLocalHub } from "./lib/presence";
 import {
   canUsePhoneNearby,
   nearbyBlockFromError,
+  payloadTooLarge,
   openPhoneLocationSettings,
   requestPhoneBluetooth,
   startPhoneNearby,
@@ -91,6 +94,7 @@ export default function App() {
   const [looking, setLooking] = useState(false);
   const [hintStatus, setHintStatus] = useState("");
   const [radioBlock, setRadioBlock] = useState<NearbyBlock | null>(null);
+  const [legacyHint, setLegacyHint] = useState("");
   const [brokerStatus] = useState<"idle" | "live" | "error">("idle");
   const [matches, setMatches] = useState<TradeMatch[]>([]);
   const [activePing, setActivePing] = useState<TradeMatch | null>(null);
@@ -139,7 +143,14 @@ export default function App() {
     try {
       if (canUsePhoneNearby()) {
         try {
-          stopNearbyRef.current = await startPhoneNearby(currentPresence(), (peer) => ingestPeer(peer, "ble"));
+          stopNearbyRef.current = await startPhoneNearby(
+            currentPresence(),
+            (peer) => ingestPeer(peer, "ble"),
+            (code) => {
+              if (code === "LEGACY_PEER") setLegacyHint(OLDER_APP_HINT);
+              if (code === "PAYLOAD_TOO_LARGE") setHintStatus(LISTS_TOO_BIG);
+            },
+          );
           pendingBlockRef.current = null;
           setRadioBlock(null);
           setLooking(true);
@@ -153,6 +164,7 @@ export default function App() {
           setRadioBlock(block);
           if (block === "location") setHintStatus(LOCATION_OFF_HINT);
           else if (block === "bluetooth") setHintStatus(BLUETOOTH_OFF_HINT);
+          else if (payloadTooLarge(err)) setHintStatus(LISTS_TOO_BIG);
           else setHintStatus(err instanceof Error ? err.message : RADIO_DOWN);
         }
         return;
@@ -219,6 +231,7 @@ export default function App() {
     lookingRef.current = false;
     pendingBlockRef.current = null;
     setRadioBlock(null);
+    setLegacyHint("");
     setLive(false);
     stopNearbyRef.current?.();
     stopNearbyRef.current = null;
@@ -284,7 +297,9 @@ export default function App() {
     if (!live) return;
     if (canUsePhoneNearby()) {
       const beat = () => {
-        void updatePhoneNearby(currentPresence());
+        void updatePhoneNearby(currentPresence()).catch((err) => {
+          if (payloadTooLarge(err)) setHintStatus(LISTS_TOO_BIG);
+        });
       };
       beat();
       const id = window.setInterval(beat, 12_000);
@@ -373,6 +388,7 @@ export default function App() {
             onStartLooking={startLooking}
             onStopLooking={stopLooking}
             radioBlock={radioBlock}
+            legacyHint={legacyHint}
             onOpenLocationSettings={() => void openLocationSettings()}
             onEnableBluetooth={() => void enableBluetooth()}
             onDemo={fireDemo}
@@ -494,6 +510,7 @@ function NearbyPane({
   onStartLooking,
   onStopLooking,
   radioBlock,
+  legacyHint,
   onOpenLocationSettings,
   onEnableBluetooth,
   onDemo,
@@ -512,6 +529,7 @@ function NearbyPane({
   onStartLooking: () => void;
   onStopLooking: () => void;
   radioBlock: NearbyBlock | null;
+  legacyHint: string;
   onOpenLocationSettings: () => void;
   onEnableBluetooth: () => void;
   onDemo: () => void;
@@ -555,6 +573,8 @@ function NearbyPane({
             />
             <p className="hint">{HERE_NOTE_HINT}</p>
             {!settings.photo ? <p className="hint">{YOU_PHOTO_HINT} Add one on You.</p> : null}
+            {legacyHint ? <p className="hint">{legacyHint}</p> : null}
+            {hintStatus ? <p className="hint">{hintStatus}</p> : null}
           </>
         ) : (
           <>
@@ -566,6 +586,7 @@ function NearbyPane({
             <button className="btn ember full" onClick={onStartLooking}>
               {CHECKIN_CTA}
             </button>
+            {legacyHint ? <p className="hint">{legacyHint}</p> : null}
             {hintStatus ? <p className="hint">{hintStatus}</p> : null}
             {radioBlock === "location" ? (
               <button className="btn secondary full" onClick={onOpenLocationSettings}>

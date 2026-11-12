@@ -37,7 +37,10 @@ public final class BleCrypto {
     public static final int OVERHEAD = 1 + PUB_LEN + NONCE_LEN + TAG_LEN;
     public static final int TARGET_MTU = 517;
     public static final int ATT_HEADER = 3;
-    public static final int MAX_FRAME = TARGET_MTU - ATT_HEADER;
+    /** One ATT packet at the MTU we ask for. Larger profiles are split across packets. */
+    public static final int SINGLE_PACKET = TARGET_MTU - ATT_HEADER;
+    /** Hard ceiling for one assembled frame, plaintext plus framing. */
+    public static final int MAX_FRAME = 2048;
     public static final int MAX_PLAINTEXT = MAX_FRAME - OVERHEAD;
     public static final int HANDSHAKE_LEN = 1 + PUB_LEN;
 
@@ -227,6 +230,13 @@ public final class BleCrypto {
         return Arrays.copyOfRange(all, offset, offset + n);
     }
 
+    /** Version 1 JSON and any other pre-v2 frame. Callers log these and do not retry. */
+    public static boolean isLegacyPayload(String reason) {
+        if (reason == null) return false;
+        return reason.contains("old or unknown protocol version")
+                || reason.contains("unencrypted payload rejected");
+    }
+
     public static boolean frameFitsSinglePacket(int frameLen, int mtu) {
         return frameLen >= 0 && frameLen <= mtu - ATT_HEADER;
     }
@@ -245,7 +255,7 @@ public final class BleCrypto {
 
     private static byte[] seal(Ephemeral self, byte[] remotePublic, byte[] serverPublic, byte[] clientPublic, byte[] plaintext, byte[] label) throws Rejected {
         if (plaintext == null) throw new Rejected("empty payload rejected");
-        if (plaintext.length > MAX_PLAINTEXT) throw new Rejected("payload exceeds MTU 517 budget");
+        if (plaintext.length > MAX_PLAINTEXT) throw new Rejected("payload exceeds 2 KB ceiling");
         byte[] nonce = new byte[NONCE_LEN];
         RANDOM.nextBytes(nonce);
         byte[] key = directionKey(self, remotePublic, serverPublic, clientPublic, label);

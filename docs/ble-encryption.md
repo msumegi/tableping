@@ -41,11 +41,11 @@ The encrypted package is:
 | AES-GCM tag | 16 |
 | Overhead | 94 |
 
-Largest profile that fits in one MTU 517 packet: 514 − 94 = **420 bytes**.
+One MTU 517 packet holds 514 bytes. A full profile does not have to fit in that one packet. The same split used for a small MTU carries any larger frame: reads come back in chunks of MTU − 3, and long writes are put back together before they are decrypted.
 
-A full profile with a UUID, a 24-character name, a 40-character note, and 12 + 12 short card ids (`base1-58` / `base1-4`) is 422 bytes, two bytes over that budget. The app shortens the card lists until the JSON is at most 420 bytes. That example keeps 11 have ids and 12 want ids (411 bytes, frame 505). The same name and note with 12 + 12 long ids (about 16 characters) is 554 bytes and is shortened to 7 have and 8 want (407 bytes, frame 501). The name and the note are kept.
+The hard ceiling is **2 KB** (2048 bytes) for the whole frame. That leaves 1954 bytes for the profile. A UUID, a 24-character name, a 40-character note, and 12 have ids plus 12 want ids fit in that, including long card ids, and every one of those ids is sent. TableTrade does not drop cards to make the frame smaller. If a profile is somehow bigger than 2 KB, looking does not start a shortened copy. The phone says the lists are too big to send.
 
-If the phones agree a smaller MTU, which the Galaxy S8+ sometimes does, the same package is split across Bluetooth packets and put back together. Reads are answered in chunks of MTU − 3. Writes that arrive as prepared-write pieces are reassembled, then decrypted. If the phone refuses the write, TableTrade logs that and does not send the profile in the clear.
+A version 1 phone is not a match. Its advertisement is ignored, the app logs that once, and it does not keep connecting. Nearby can show “Someone nearby has an older TableTrade. Ask them to update.” A plaintext or version 1 write is rejected the same way, without a retry loop.
 
 ## What this protects against
 

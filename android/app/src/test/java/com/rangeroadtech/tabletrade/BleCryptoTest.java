@@ -117,25 +117,91 @@ public class BleCryptoTest {
     }
 
     @Test
-    public void maxPlaintextFitsMtu517AndOneExtraDoesNot() throws Exception {
+    public void ceilingIsTwoKilobytesAndOneExtraByteIsRejected() throws Exception {
         assertEquals(94, BleCrypto.OVERHEAD);
-        assertEquals(514, BleCrypto.MAX_FRAME);
-        assertEquals(420, BleCrypto.MAX_PLAINTEXT);
+        assertEquals(2048, BleCrypto.MAX_FRAME);
+        assertEquals(1954, BleCrypto.MAX_PLAINTEXT);
+        assertEquals(514, BleCrypto.SINGLE_PACKET);
         byte[] plain = new byte[BleCrypto.MAX_PLAINTEXT];
         Arrays.fill(plain, (byte) 'A');
         BleCrypto.Ephemeral server = BleCrypto.generate();
         BleCrypto.Ephemeral client = BleCrypto.generate();
         byte[] frame = BleCrypto.sealClientToServer(client, server.publicKey(), plain);
         assertEquals(BleCrypto.MAX_FRAME, frame.length);
-        assertTrue(BleCrypto.frameFitsSinglePacket(frame.length, BleCrypto.TARGET_MTU));
-        assertFalse(BleCrypto.frameFitsSinglePacket(frame.length, 185));
-        assertArrayEquals(plain, BleCrypto.openClientToServer(server, frame, new BleCrypto.NonceWindow()).plaintext);
+        assertFalse(BleCrypto.frameFitsSinglePacket(frame.length, BleCrypto.TARGET_MTU));
+        byte[] back = reassemble(frame, BleCrypto.TARGET_MTU);
+        assertArrayEquals(plain, BleCrypto.openClientToServer(server, back, new BleCrypto.NonceWindow()).plaintext);
         try {
             BleCrypto.sealClientToServer(client, server.publicKey(), new byte[BleCrypto.MAX_PLAINTEXT + 1]);
             fail("oversize sealed");
         } catch (BleCrypto.Rejected e) {
-            assertTrue(e.getMessage().contains("MTU 517"));
+            assertTrue(e.getMessage().contains("2 KB"));
         }
+    }
+
+    @Test
+    public void maxCardListSurvivesMtu517AndMtu23() throws Exception {
+        String[] have = new String[12];
+        String[] want = new String[12];
+        for (int i = 0; i < 12; i++) {
+            have[i] = String.format("swsh12pt5gg-GG%02d", i);
+            want[i] = "sv8pt5-" + (200 + i);
+        }
+        StringBuilder json = new StringBuilder();
+        json.append("{\"userId\":\"12345678-1234-1234-1234-123456789abc\",\"name\":\"")
+                .append("N".repeat(24))
+                .append("\",\"note\":\"")
+                .append("O".repeat(40))
+                .append("\",\"have\":[");
+        for (int i = 0; i < have.length; i++) {
+            if (i > 0) json.append(',');
+            json.append('"').append(have[i]).append('"');
+        }
+        json.append("],\"want\":[");
+        for (int i = 0; i < want.length; i++) {
+            if (i > 0) json.append(',');
+            json.append('"').append(want[i]).append('"');
+        }
+        json.append("],\"ts\":1731400000000}");
+        byte[] plain = json.toString().getBytes(StandardCharsets.UTF_8);
+        assertTrue(plain.length <= BleCrypto.MAX_PLAINTEXT);
+
+        BleCrypto.Ephemeral server = BleCrypto.generate();
+        BleCrypto.Ephemeral client = BleCrypto.generate();
+        byte[] frame = BleCrypto.sealClientToServer(client, server.publicKey(), plain);
+        assertTrue(frame.length > BleCrypto.SINGLE_PACKET);
+        assertTrue(frame.length <= BleCrypto.MAX_FRAME);
+        assertFalse(BleCrypto.frameFitsSinglePacket(frame.length, 517));
+        assertFalse(BleCrypto.frameFitsSinglePacket(frame.length, 23));
+
+        for (int mtu : new int[] { 517, 23 }) {
+            byte[] joined = reassemble(frame, mtu);
+            assertArrayEquals(frame, joined);
+            String text = new String(
+                    BleCrypto.openClientToServer(server, joined, new BleCrypto.NonceWindow()).plaintext,
+                    StandardCharsets.UTF_8);
+            for (String id : have) assertTrue(text.contains("\"" + id + "\""));
+            for (String id : want) assertTrue(text.contains("\"" + id + "\""));
+            assertTrue(text.contains("N".repeat(24)));
+            assertTrue(text.contains("O".repeat(40)));
+        }
+        assertTrue(BleCrypto.isLegacyPayload("old or unknown protocol version"));
+        assertTrue(BleCrypto.isLegacyPayload("unencrypted payload rejected"));
+        assertFalse(BleCrypto.isLegacyPayload("authentication failed"));
+        assertFalse(BleCrypto.isLegacyPayload("replayed nonce"));
+    }
+
+    private static byte[] reassemble(byte[] frame, int mtu) throws Exception {
+        BleCrypto.WriteAssembler asm = new BleCrypto.WriteAssembler();
+        int offset = 0;
+        while (offset < frame.length) {
+            byte[] slice = BleCrypto.sliceForMtu(frame, offset, mtu);
+            assertTrue(slice.length > 0);
+            assertTrue(slice.length <= mtu - BleCrypto.ATT_HEADER);
+            asm.append(offset, slice);
+            offset += slice.length;
+        }
+        return asm.finish();
     }
 
     @Test
