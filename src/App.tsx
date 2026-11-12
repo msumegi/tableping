@@ -78,6 +78,7 @@ import {
   payloadTooLarge,
   openPhoneLocationSettings,
   openPhoneAppSettings,
+  phonePermissionStatus,
   phoneRadioInfo,
   recheckPhoneRadio,
   requestPhoneBluetooth,
@@ -85,6 +86,7 @@ import {
   updatePhoneNearby,
   type NearbyBlock,
 } from "./lib/bleNearby";
+import { permissionDenied, resumePermission } from "./lib/nearbyPermission";
 
 const TABS: { id: Tab; ico: string; lbl: string }[] = [
   { id: "have", ico: "▣", lbl: "Have" },
@@ -105,6 +107,8 @@ export default function App() {
   const [radioBlock, setRadioBlock] = useState<NearbyBlock | null>(null);
   const [legacyHint, setLegacyHint] = useState("");
   const [needsLocation, setNeedsLocation] = useState(false);
+  const needsLocationRef = useRef(false);
+  needsLocationRef.current = needsLocation;
   const [brokerStatus] = useState<"idle" | "live" | "error">("idle");
   const [matches, setMatches] = useState<TradeMatch[]>([]);
   const [activePing, setActivePing] = useState<TradeMatch | null>(null);
@@ -156,9 +160,23 @@ export default function App() {
   async function startLooking() {
     if (lookingRef.current || startingRef.current) return;
     startingRef.current = true;
-    setHintStatus("Turning looking on…");
     try {
       if (canUsePhoneNearby()) {
+        const already = await phonePermissionStatus().catch(() => null);
+        if (already && already.granted === false && already.blocked) {
+          const next = permissionDenied(
+            { looking: false, hint: "", block: null, requests: 0 },
+            { blocked: true, needsLocation: needsLocationRef.current },
+          );
+          setLooking(false);
+          lookingRef.current = false;
+          setLive(false);
+          setHintStatus(next.hint);
+          setRadioBlock("settings");
+          pendingBlockRef.current = "settings";
+          return;
+        }
+        setHintStatus("Turning looking on…");
         try {
           stopNearbyRef.current = await startPhoneNearby(
             currentPresence(),
@@ -178,9 +196,20 @@ export default function App() {
           setTab("nearby");
         } catch (err) {
           const block = nearbyBlockFromError(err);
-          pendingBlockRef.current = block;
-          setRadioBlock(block);
-          showNearbyFailure(err);
+          if (block === "permission" || block === "settings") {
+            const next = permissionDenied(
+              { looking: false, hint: "", block: null, requests: 1 },
+              { blocked: block === "settings", needsLocation: needsLocationRef.current },
+            );
+            setLooking(false);
+            lookingRef.current = false;
+            setLive(false);
+            setHintStatus(next.hint);
+            setRadioBlock(next.block);
+            pendingBlockRef.current = next.block;
+          } else {
+            showNearbyFailure(err);
+          }
         }
         return;
       }
@@ -213,7 +242,37 @@ export default function App() {
         void recheckPhoneRadio().catch((err) => showNearbyFailure(err));
         return;
       }
-      if (pendingBlockRef.current) startLookingRef.current();
+      const waiting = pendingBlockRef.current;
+      if (waiting === "permission" || waiting === "settings") {
+        void phonePermissionStatus()
+          .then((status) => {
+            const next = resumePermission(
+              {
+                looking: false,
+                hint: "",
+                block: waiting,
+                requests: 1,
+              },
+              Boolean(status.granted),
+            );
+            if (status.granted) {
+              setHintStatus("");
+              setRadioBlock(null);
+              pendingBlockRef.current = null;
+              setLooking(false);
+              lookingRef.current = false;
+              return;
+            }
+            setHintStatus(next.hint || (needsLocationRef.current ? PERMISSION_LOCATION : PERMISSION_NEARBY));
+            setRadioBlock(status.blocked ? "settings" : "permission");
+            pendingBlockRef.current = status.blocked ? "settings" : "permission";
+            setLooking(false);
+            lookingRef.current = false;
+          })
+          .catch(() => {});
+        return;
+      }
+      if (waiting === "location" || waiting === "bluetooth") startLookingRef.current();
     }).then((sub) => {
       if (removed) void sub.remove();
       else handle = sub;
@@ -257,7 +316,7 @@ export default function App() {
 
   function showNearbyFailure(err: unknown) {
     const block = nearbyBlockFromError(err);
-    if (block === "location" || block === "bluetooth") {
+    if (block === "location" || block === "bluetooth" || block === "permission" || block === "settings") {
       stopNearbyRef.current?.();
       stopNearbyRef.current = null;
       setLooking(false);
@@ -269,8 +328,11 @@ export default function App() {
     if (block === "location") setHintStatus(LOCATION_OFF_HINT);
     else if (block === "bluetooth") setHintStatus(BLUETOOTH_OFF_HINT);
     else if (block === "settings" || block === "permission") {
-      const message = err instanceof Error ? err.message : "";
-      setHintStatus(message || (needsLocation ? PERMISSION_LOCATION : PERMISSION_NEARBY));
+      const next = permissionDenied(
+        { looking: false, hint: "", block: null, requests: 1 },
+        { blocked: block === "settings", needsLocation: needsLocationRef.current },
+      );
+      setHintStatus(next.hint);
     } else if (payloadTooLarge(err)) setHintStatus(LISTS_TOO_BIG);
     else setHintStatus(err instanceof Error ? err.message : RADIO_DOWN);
   }

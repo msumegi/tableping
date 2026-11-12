@@ -11,6 +11,7 @@ type NearbyNative = {
   openAppSettings(): Promise<void>;
   recheck(): Promise<void>;
   radioInfo(): Promise<{ needsLocation?: boolean }>;
+  permissionStatus(): Promise<{ granted?: boolean; blocked?: boolean }>;
   addListener(
     eventName: "peer" | "status",
     listener: (ev: { payload?: string; code?: string }) => void,
@@ -96,6 +97,10 @@ export function recheckPhoneRadio(): Promise<void> {
 
 export function phoneRadioInfo(): Promise<{ needsLocation?: boolean }> {
   return native.radioInfo();
+}
+
+export function phonePermissionStatus(): Promise<{ granted?: boolean; blocked?: boolean }> {
+  return native.permissionStatus();
 }
 
 function cardIds(cards: Card[], n: number): string[] {

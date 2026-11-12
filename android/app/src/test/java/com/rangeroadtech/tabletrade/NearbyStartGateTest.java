@@ -43,6 +43,10 @@ public class NearbyStartGateTest {
         assertEquals(16_000L, NearbyRetry.backoffMs(3));
         assertEquals(60_000L, NearbyRetry.backoffMs(4));
         assertEquals(60_000L, NearbyRetry.backoffMs(9));
+        assertTrue(NearbyStartGate.shouldRequestPermission(false, false, false));
+        assertTrue(NearbyStartGate.shouldRequestPermission(false, true, true));
+        assertFalse(NearbyStartGate.shouldRequestPermission(false, true, false));
+        assertFalse(NearbyStartGate.shouldRequestPermission(true, true, false));
         String location = NearbyStartGate.messageFor(NearbyStartGate.LOCATION_OFF);
         assertTrue(location.contains("does not use your GPS position"));
         assertTrue(location.contains("Android 11 and older"));

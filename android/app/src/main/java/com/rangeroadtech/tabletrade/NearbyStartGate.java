@@ -34,6 +34,16 @@ public final class NearbyStartGate {
         return null;
     }
 
+    /**
+     * A permission dialog is only for an explicit I'm looking tap.
+     * After Don't ask again, alreadyAsked is true and showRationale is false, so we must not ask again.
+     */
+    public static boolean shouldRequestPermission(boolean granted, boolean alreadyAsked, boolean showRationale) {
+        if (granted) return false;
+        if (alreadyAsked && !showRationale) return false;
+        return true;
+    }
+
     public static String messageFor(String code) {
         if (LOCATION_OFF.equals(code)) return LOCATION_OFF_MESSAGE;
         if (BLUETOOTH_OFF.equals(code)) return BLUETOOTH_OFF_MESSAGE;

@@ -224,15 +224,17 @@ public class NearbyPlugin extends Plugin {
             return;
         }
         payload = next;
-        if (Build.VERSION.SDK_INT >= 31) {
-            if (getPermissionState("scan") != PermissionState.GRANTED
-                    || getPermissionState("advertise") != PermissionState.GRANTED
-                    || getPermissionState("connect") != PermissionState.GRANTED) {
-                requestPermissionForAliases(new String[] { "scan", "advertise", "connect" }, call, "permStart");
+        if (!permissionsGranted()) {
+            if (!NearbyStartGate.shouldRequestPermission(false, permissionAsked(), permissionRationale())) {
+                rejectPermission(call);
                 return;
             }
-        } else if (getPermissionState("location") != PermissionState.GRANTED) {
-            requestPermissionForAliases(new String[] { "location" }, call, "permStart");
+            markPermissionAsked();
+            if (Build.VERSION.SDK_INT >= 31) {
+                requestPermissionForAliases(new String[] { "scan", "advertise", "connect" }, call, "permStart");
+            } else {
+                requestPermissionForAliases(new String[] { "location" }, call, "permStart");
+            }
             return;
         }
         begin(call);
@@ -935,6 +937,15 @@ public class NearbyPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void permissionStatus(PluginCall call) {
+        boolean granted = permissionsGranted();
+        JSObject info = new JSObject();
+        info.put("granted", granted);
+        info.put("blocked", !granted && permissionAsked() && !permissionRationale());
+        call.resolve(info);
+    }
+
+    @PluginMethod
     public void radioInfo(PluginCall call) {
         JSObject info = new JSObject();
         info.put("needsLocation", NearbyStartGate.needsSystemLocation(Build.VERSION.SDK_INT));
@@ -1018,6 +1029,38 @@ public class NearbyPlugin extends Plugin {
         ev.put("code", code);
         notifyListeners("status", ev);
         halt();
+    }
+
+    private boolean permissionsGranted() {
+        if (Build.VERSION.SDK_INT >= 31) {
+            return getPermissionState("scan") == PermissionState.GRANTED
+                    && getPermissionState("advertise") == PermissionState.GRANTED
+                    && getPermissionState("connect") == PermissionState.GRANTED;
+        }
+        return getPermissionState("location") == PermissionState.GRANTED;
+    }
+
+    private boolean permissionAsked() {
+        return getContext().getSharedPreferences("tabletrade_nearby", android.content.Context.MODE_PRIVATE)
+                .getBoolean("asked_permission", false);
+    }
+
+    private void markPermissionAsked() {
+        getContext().getSharedPreferences("tabletrade_nearby", android.content.Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean("asked_permission", true)
+                .apply();
+    }
+
+    private boolean permissionRationale() {
+        Activity activity = getActivity();
+        if (activity == null) return false;
+        if (Build.VERSION.SDK_INT >= 31) {
+            return ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.BLUETOOTH_SCAN)
+                    || ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.BLUETOOTH_CONNECT)
+                    || ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.BLUETOOTH_ADVERTISE);
+        }
+        return ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.ACCESS_FINE_LOCATION);
     }
 
     private void rejectPermission(PluginCall call) {
