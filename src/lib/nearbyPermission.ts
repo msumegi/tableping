@@ -8,6 +8,11 @@ export type PermissionUi = {
   requests: number;
 };
 
+/** The “Android will ask…” line is only useful before the first denial. */
+export function showLocationAsk(needsLocation: boolean, block: NearbyBlock | null): boolean {
+  return needsLocation && block !== "permission" && block !== "settings";
+}
+
 export function permissionSentence(needsLocation: boolean): string {
   return needsLocation ? PERMISSION_LOCATION : PERMISSION_NEARBY;
 }

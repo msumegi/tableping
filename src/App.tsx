@@ -86,7 +86,7 @@ import {
   updatePhoneNearby,
   type NearbyBlock,
 } from "./lib/bleNearby";
-import { permissionDenied, resumePermission } from "./lib/nearbyPermission";
+import { permissionDenied, resumePermission, showLocationAsk } from "./lib/nearbyPermission";
 
 const TABS: { id: Tab; ico: string; lbl: string }[] = [
   { id: "have", ico: "▣", lbl: "Have" },
@@ -713,7 +713,7 @@ function NearbyPane({
               <p className="hint">{checkInHint(false)}</p>
             </div>
             <p className="hint">{locationHintCopy()}</p>
-            {needsLocation ? <p className="hint">{LOCATION_ASK}</p> : null}
+            {showLocationAsk(needsLocation, radioBlock) ? <p className="hint">{LOCATION_ASK}</p> : null}
             <button className="btn ember full" onClick={onStartLooking}>
               {CHECKIN_CTA}
             </button>
