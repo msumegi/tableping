@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { App as CapApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 import type { Card, MatchSource, Presence, Settings, Tab, TradeMatch } from "./types";
 import { AddCardSheet } from "./AddCardSheet";
 import { ProfilePhotoSheet } from "./ProfilePhotoSheet";
@@ -22,8 +24,13 @@ import {
   HAVE_FIRST_RUN_TITLE,
   HAVE_LEDE,
   HERE_NOTE_HINT,
+  HERE_NOTE_PLACEHOLDER,
   HERE_NOTE_LABEL,
   HERE_NOTE_MAX,
+  LOCATION_ASK,
+  PERMISSION_LOCATION,
+  PERMISSION_NEARBY,
+  OPEN_APP_SETTINGS,
   INSTALL_ANDROID,
   INSTALL_HEADING,
   INSTALL_IPHONE,
@@ -51,6 +58,12 @@ import {
   AGE_NO,
   AGE_BLOCKED,
   RADIO_DOWN,
+  LOCATION_OFF_HINT,
+  OPEN_LOCATION_SETTINGS,
+  BLUETOOTH_OFF_HINT,
+  TURN_ON_BLUETOOTH,
+  LISTS_TOO_BIG,
+  OLDER_APP_HINT,
   HEAR_AGAIN,
   REPORT_PEER,
   MATCH_PRINTING,
@@ -59,7 +72,21 @@ import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
 import { kindLabel, matchAgainst, sourceLabel } from "./lib/match";
 import { compressProfilePhoto, initialsFromName } from "./lib/photo";
 import { connectLocalHub } from "./lib/presence";
-import { canUsePhoneNearby, startPhoneNearby, updatePhoneNearby } from "./lib/bleNearby";
+import {
+  canUsePhoneNearby,
+  nearbyBlockFromError,
+  payloadTooLarge,
+  openPhoneLocationSettings,
+  openPhoneAppSettings,
+  phonePermissionStatus,
+  phoneRadioInfo,
+  recheckPhoneRadio,
+  requestPhoneBluetooth,
+  startPhoneNearby,
+  updatePhoneNearby,
+  type NearbyBlock,
+} from "./lib/bleNearby";
+import { permissionDenied, resumePermission, showLocationAsk } from "./lib/nearbyPermission";
 
 const TABS: { id: Tab; ico: string; lbl: string }[] = [
   { id: "have", ico: "▣", lbl: "Have" },
@@ -77,6 +104,11 @@ export default function App() {
   const [live, setLive] = useState(false);
   const [looking, setLooking] = useState(false);
   const [hintStatus, setHintStatus] = useState("");
+  const [radioBlock, setRadioBlock] = useState<NearbyBlock | null>(null);
+  const [legacyHint, setLegacyHint] = useState("");
+  const [needsLocation, setNeedsLocation] = useState(false);
+  const needsLocationRef = useRef(false);
+  needsLocationRef.current = needsLocation;
   const [brokerStatus] = useState<"idle" | "live" | "error">("idle");
   const [matches, setMatches] = useState<TradeMatch[]>([]);
   const [activePing, setActivePing] = useState<TradeMatch | null>(null);
@@ -89,6 +121,10 @@ export default function App() {
   const wantRef = useRef(want);
   const settingsRef = useRef(settings);
   const stopNearbyRef = useRef<null | (() => void)>(null);
+  const pendingBlockRef = useRef<NearbyBlock | null>(null);
+  const lookingRef = useRef(false);
+  const startingRef = useRef(false);
+  const startLookingRef = useRef<() => void>(() => {});
   const seenRef = useRef<Set<string>>(new Set(loadSeenMatchIds()));
 
   haveRef.current = have;
@@ -98,6 +134,13 @@ export default function App() {
   useEffect(() => saveHave(have), [have]);
   useEffect(() => saveWant(want), [want]);
   useEffect(() => saveSettings(settings), [settings]);
+
+  useEffect(() => {
+    if (!canUsePhoneNearby()) return;
+    void phoneRadioInfo()
+      .then((info) => setNeedsLocation(Boolean(info.needsLocation)))
+      .catch(() => {});
+  }, []);
 
   function currentPresence(): Presence {
     return {
@@ -115,31 +158,203 @@ export default function App() {
   }
 
   async function startLooking() {
-    setHintStatus("Turning looking on…");
-    if (canUsePhoneNearby()) {
-      try {
-        stopNearbyRef.current = await startPhoneNearby(currentPresence(), (peer) => ingestPeer(peer, "ble"));
+    if (lookingRef.current || startingRef.current) return;
+    startingRef.current = true;
+    try {
+      if (canUsePhoneNearby()) {
+        const already = await phonePermissionStatus().catch(() => null);
+        if (already && already.granted === false && already.blocked) {
+          const next = permissionDenied(
+            { looking: false, hint: "", block: null, requests: 0 },
+            { blocked: true, needsLocation: needsLocationRef.current },
+          );
+          setLooking(false);
+          lookingRef.current = false;
+          setLive(false);
+          setHintStatus(next.hint);
+          setRadioBlock("settings");
+          pendingBlockRef.current = "settings";
+          return;
+        }
+        setHintStatus("Turning looking on…");
+        try {
+          stopNearbyRef.current = await startPhoneNearby(
+            currentPresence(),
+            (peer) => ingestPeer(peer, "ble"),
+            (code) => {
+              if (code === "LEGACY_PEER") setLegacyHint(OLDER_APP_HINT);
+              if (code === "PAYLOAD_TOO_LARGE") setHintStatus(LISTS_TOO_BIG);
+              if (code === "LOCATION_OFF" || code === "BLUETOOTH_OFF") leaveLookingForRadio(code);
+            },
+          );
+          pendingBlockRef.current = null;
+          setRadioBlock(null);
+          setLooking(true);
+          lookingRef.current = true;
+          setLive(true);
+          setHintStatus("");
+          setTab("nearby");
+        } catch (err) {
+          const block = nearbyBlockFromError(err);
+          if (block === "permission" || block === "settings") {
+            const next = permissionDenied(
+              { looking: false, hint: "", block: null, requests: 1 },
+              { blocked: block === "settings", needsLocation: needsLocationRef.current },
+            );
+            setLooking(false);
+            lookingRef.current = false;
+            setLive(false);
+            setHintStatus(next.hint);
+            setRadioBlock(next.block);
+            pendingBlockRef.current = next.block;
+          } else {
+            showNearbyFailure(err);
+          }
+        }
+        return;
+      }
+      if (import.meta.env.DEV) {
+        pendingBlockRef.current = null;
+        setRadioBlock(null);
         setLooking(true);
+        lookingRef.current = true;
         setLive(true);
         setHintStatus("");
         setTab("nearby");
-      } catch (err) {
-        setHintStatus(err instanceof Error ? err.message : RADIO_DOWN);
+        return;
       }
-      return;
+      setHintStatus(RADIO_DOWN);
+    } finally {
+      startingRef.current = false;
     }
-    if (import.meta.env.DEV) {
-      setLooking(true);
-      setLive(true);
-      setHintStatus("");
-      setTab("nearby");
-      return;
+  }
+
+  startLookingRef.current = () => {
+    void startLooking();
+  };
+
+  useEffect(() => {
+    let removed = false;
+    let handle: { remove: () => Promise<void> | void } | undefined;
+    void CapApp.addListener("appStateChange", ({ isActive }) => {
+      if (!isActive) return;
+      if (lookingRef.current) {
+        void recheckPhoneRadio().catch((err) => showNearbyFailure(err));
+        return;
+      }
+      const waiting = pendingBlockRef.current;
+      if (waiting === "permission" || waiting === "settings") {
+        void phonePermissionStatus()
+          .then((status) => {
+            const next = resumePermission(
+              {
+                looking: false,
+                hint: "",
+                block: waiting,
+                requests: 1,
+              },
+              Boolean(status.granted),
+            );
+            if (status.granted) {
+              setHintStatus("");
+              setRadioBlock(null);
+              pendingBlockRef.current = null;
+              setLooking(false);
+              lookingRef.current = false;
+              return;
+            }
+            setHintStatus(next.hint || (needsLocationRef.current ? PERMISSION_LOCATION : PERMISSION_NEARBY));
+            setRadioBlock(status.blocked ? "settings" : "permission");
+            pendingBlockRef.current = status.blocked ? "settings" : "permission";
+            setLooking(false);
+            lookingRef.current = false;
+          })
+          .catch(() => {});
+        return;
+      }
+      if (waiting === "location" || waiting === "bluetooth") startLookingRef.current();
+    }).then((sub) => {
+      if (removed) void sub.remove();
+      else handle = sub;
+    }).catch(() => {});
+    return () => {
+      removed = true;
+      void handle?.remove();
+    };
+  }, []);
+
+  async function openLocationSettings() {
+    try {
+      await openPhoneLocationSettings();
+    } catch {
+      setHintStatus(LOCATION_OFF_HINT);
+      setRadioBlock("location");
+      pendingBlockRef.current = "location";
     }
-    setHintStatus(RADIO_DOWN);
+  }
+
+  async function openAppSettings() {
+    try {
+      await openPhoneAppSettings();
+    } catch {
+      setHintStatus(needsLocation ? PERMISSION_LOCATION : PERMISSION_NEARBY);
+      setRadioBlock("settings");
+      pendingBlockRef.current = "settings";
+    }
+  }
+
+  async function enableBluetooth() {
+    try {
+      await requestPhoneBluetooth();
+      await startLooking();
+    } catch {
+      setHintStatus(BLUETOOTH_OFF_HINT);
+      setRadioBlock("bluetooth");
+      pendingBlockRef.current = "bluetooth";
+    }
+  }
+
+  function showNearbyFailure(err: unknown) {
+    const block = nearbyBlockFromError(err);
+    if (block === "location" || block === "bluetooth" || block === "permission" || block === "settings") {
+      stopNearbyRef.current?.();
+      stopNearbyRef.current = null;
+      setLooking(false);
+      lookingRef.current = false;
+      setLive(false);
+    }
+    pendingBlockRef.current = block;
+    setRadioBlock(block);
+    if (block === "location") setHintStatus(LOCATION_OFF_HINT);
+    else if (block === "bluetooth") setHintStatus(BLUETOOTH_OFF_HINT);
+    else if (block === "settings" || block === "permission") {
+      const next = permissionDenied(
+        { looking: false, hint: "", block: null, requests: 1 },
+        { blocked: block === "settings", needsLocation: needsLocationRef.current },
+      );
+      setHintStatus(next.hint);
+    } else if (payloadTooLarge(err)) setHintStatus(LISTS_TOO_BIG);
+    else setHintStatus(err instanceof Error ? err.message : RADIO_DOWN);
+  }
+
+  function leaveLookingForRadio(code: string) {
+    stopNearbyRef.current?.();
+    stopNearbyRef.current = null;
+    setLooking(false);
+    lookingRef.current = false;
+    setLive(false);
+    const block = code === "LOCATION_OFF" ? "location" : "bluetooth";
+    pendingBlockRef.current = block;
+    setRadioBlock(block);
+    setHintStatus(block === "location" ? LOCATION_OFF_HINT : BLUETOOTH_OFF_HINT);
   }
 
   function stopLooking() {
     setLooking(false);
+    lookingRef.current = false;
+    pendingBlockRef.current = null;
+    setRadioBlock(null);
+    setLegacyHint("");
     setLive(false);
     stopNearbyRef.current?.();
     stopNearbyRef.current = null;
@@ -205,7 +420,9 @@ export default function App() {
     if (!live) return;
     if (canUsePhoneNearby()) {
       const beat = () => {
-        void updatePhoneNearby(currentPresence());
+        void updatePhoneNearby(currentPresence()).catch((err) => {
+          if (payloadTooLarge(err)) setHintStatus(LISTS_TOO_BIG);
+        });
       };
       beat();
       const id = window.setInterval(beat, 12_000);
@@ -265,7 +482,7 @@ export default function App() {
             lede={HAVE_LEDE}
             cards={have}
             empty="Nothing yet. Add a card you’d trade."
-            intro={have.length === 0 ? <HaveFirstRun showInstall={!isStandalonePwa()} /> : null}
+            intro={have.length === 0 ? <HaveFirstRun showInstall={!isStandalonePwa() && !Capacitor.isNativePlatform()} /> : null}
             onAdd={() => setAddingFor("have")}
             onRemove={(id) => setHave((prev) => removeCard(prev, id))}
           />
@@ -293,6 +510,12 @@ export default function App() {
             onLookingNote={(lookingNote) => remember({ ...settings, lookingNote })}
             onStartLooking={startLooking}
             onStopLooking={stopLooking}
+            radioBlock={radioBlock}
+            legacyHint={legacyHint}
+            needsLocation={needsLocation}
+            onOpenLocationSettings={() => void openLocationSettings()}
+            onOpenAppSettings={() => void openAppSettings()}
+            onEnableBluetooth={() => void enableBluetooth()}
             onDemo={fireDemo}
             onHearAgain={hearAgain}
             onOpenPing={setActivePing}
@@ -302,6 +525,7 @@ export default function App() {
           <YouPane
             settings={settings}
             installed={isStandalonePwa()}
+            showInstall={!Capacitor.isNativePlatform()}
             onName={(displayName) => remember({ ...settings, displayName })}
             onLookingNote={(lookingNote) => remember({ ...settings, lookingNote })}
             onOpenPhoto={() => setShowPhoto(true)}
@@ -411,6 +635,12 @@ function NearbyPane({
   onLookingNote,
   onStartLooking,
   onStopLooking,
+  radioBlock,
+  legacyHint,
+  needsLocation,
+  onOpenLocationSettings,
+  onOpenAppSettings,
+  onEnableBluetooth,
   onDemo,
   onHearAgain,
   onOpenPing,
@@ -426,6 +656,12 @@ function NearbyPane({
   onLookingNote: (note: string) => void;
   onStartLooking: () => void;
   onStopLooking: () => void;
+  radioBlock: NearbyBlock | null;
+  legacyHint: string;
+  needsLocation: boolean;
+  onOpenLocationSettings: () => void;
+  onOpenAppSettings: () => void;
+  onEnableBluetooth: () => void;
   onDemo: () => void;
   onHearAgain: () => void;
   onOpenPing: (m: TradeMatch) => void;
@@ -461,12 +697,14 @@ function NearbyPane({
               id="here-note"
               className="field"
               maxLength={HERE_NOTE_MAX}
-              placeholder={HERE_NOTE_HINT}
+              placeholder={HERE_NOTE_PLACEHOLDER}
               value={settings.lookingNote ?? ""}
               onChange={(e) => onLookingNote(e.target.value.slice(0, HERE_NOTE_MAX))}
             />
             <p className="hint">{HERE_NOTE_HINT}</p>
             {!settings.photo ? <p className="hint">{YOU_PHOTO_HINT} Add one on You.</p> : null}
+            {legacyHint ? <p className="callout warn" role="status">{legacyHint}</p> : null}
+            {hintStatus ? <p className="hint">{hintStatus}</p> : null}
           </>
         ) : (
           <>
@@ -475,10 +713,27 @@ function NearbyPane({
               <p className="hint">{checkInHint(false)}</p>
             </div>
             <p className="hint">{locationHintCopy()}</p>
+            {showLocationAsk(needsLocation, radioBlock) ? <p className="hint">{LOCATION_ASK}</p> : null}
             <button className="btn ember full" onClick={onStartLooking}>
               {CHECKIN_CTA}
             </button>
+            {legacyHint ? <p className="callout warn" role="status">{legacyHint}</p> : null}
             {hintStatus ? <p className="hint">{hintStatus}</p> : null}
+            {radioBlock === "settings" ? (
+              <button className="btn secondary full" onClick={onOpenAppSettings}>
+                {OPEN_APP_SETTINGS}
+              </button>
+            ) : null}
+            {radioBlock === "location" ? (
+              <button className="btn secondary full" onClick={onOpenLocationSettings}>
+                {OPEN_LOCATION_SETTINGS}
+              </button>
+            ) : null}
+            {radioBlock === "bluetooth" ? (
+              <button className="btn secondary full" onClick={onEnableBluetooth}>
+                {TURN_ON_BLUETOOTH}
+              </button>
+            ) : null}
           </>
         )}
       </div>
@@ -525,6 +780,7 @@ function NearbyPane({
 function YouPane({
   settings,
   installed,
+  showInstall,
   onName,
   onLookingNote,
   onOpenPhoto,
@@ -534,6 +790,7 @@ function YouPane({
 }: {
   settings: Settings;
   installed: boolean;
+  showInstall: boolean;
   onName: (name: string) => void;
   onLookingNote: (note: string) => void;
   onOpenPhoto: () => void;
@@ -563,7 +820,7 @@ function YouPane({
           id="you-here-note"
           className="field"
           maxLength={HERE_NOTE_MAX}
-          placeholder={HERE_NOTE_HINT}
+          placeholder={HERE_NOTE_PLACEHOLDER}
           value={settings.lookingNote ?? ""}
           onChange={(e) => onLookingNote(e.target.value.slice(0, HERE_NOTE_MAX))}
         />
@@ -623,20 +880,24 @@ function YouPane({
           <a href={SITE_PRIVACY}>Privacy</a>
         </li>
       </ul>
-      <h3 className="panel-title">{INSTALL_HEADING}</h3>
-      {installed ? (
-        <p className="lede">On your home screen. {INSTALL_NO_ACCOUNT}</p>
-      ) : (
-        <div className="you-card stack">
-          <p className="hint">{INSTALL_NO_ACCOUNT}</p>
-          <p className="lede" style={{ margin: 0 }}>
-            {INSTALL_IPHONE}
-          </p>
-          <p className="lede" style={{ margin: 0 }}>
-            {INSTALL_ANDROID}
-          </p>
-        </div>
-      )}
+      {showInstall ? (
+        <>
+          <h3 className="panel-title">{INSTALL_HEADING}</h3>
+          {installed ? (
+            <p className="lede">On your home screen. {INSTALL_NO_ACCOUNT}</p>
+          ) : (
+            <div className="you-card stack">
+              <p className="hint">{INSTALL_NO_ACCOUNT}</p>
+              <p className="lede" style={{ margin: 0 }}>
+                {INSTALL_IPHONE}
+              </p>
+              <p className="lede" style={{ margin: 0 }}>
+                {INSTALL_ANDROID}
+              </p>
+            </div>
+          )}
+        </>
+      ) : null}
     </section>
   );
 }

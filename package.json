@@ -8,7 +8,7 @@
     "dev": "vite --host",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host --port 4173",
-    "test": "vitest run",
+    "test": "vitest run && node scripts/chrome69-syntax.mjs",
     "icons": "python3 scripts/make-icons.py",
     "build:app": "tsc -b && vite build",
     "android:sync": "npm run build:app && npx cap sync android"

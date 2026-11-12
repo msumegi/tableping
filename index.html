@@ -32,16 +32,104 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icons/icon-192.png" />
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
     <title>TableTrade</title>
   </head>
   <body>
+    <div id="webview-fallback" hidden style="box-sizing:border-box;min-height:100vh;margin:0;padding:32px 20px;font-family:sans-serif;font-size:1.15rem;line-height:1.45;color:#f3ead8;background:#12100e;">
+      TableTrade needs an update to Android System WebView. Open Google Play and update Android System WebView, then reopen TableTrade.
+    </div>
     <div id="root"></div>
+    <script nomodule>
+      var el = document.getElementById("webview-fallback");
+      if (el) el.hidden = false;
+    </script>
+    <script>
+      (function () {
+        if (typeof globalThis === "undefined") window.globalThis = window;
+        if (typeof queueMicrotask !== "function") {
+          window.queueMicrotask = function (fn) {
+            Promise.resolve().then(fn);
+          };
+        }
+        if (typeof Promise.allSettled !== "function") {
+          Promise.allSettled = function (items) {
+            return Promise.all(
+              Array.prototype.map.call(items, function (item) {
+                return Promise.resolve(item).then(
+                  function (value) {
+                    return { status: "fulfilled", value: value };
+                  },
+                  function (reason) {
+                    return { status: "rejected", reason: reason };
+                  },
+                );
+              }),
+            );
+          };
+        }
+        if (typeof Object.fromEntries !== "function") {
+          Object.fromEntries = function (entries) {
+            var out = {};
+            var list = Array.from(entries);
+            for (var i = 0; i < list.length; i++) out[list[i][0]] = list[i][1];
+            return out;
+          };
+        }
+        if (!String.prototype.replaceAll) {
+          String.prototype.replaceAll = function (search, replacement) {
+            var text = String(this);
+            if (search instanceof RegExp) {
+              if (!search.global) throw new TypeError("replaceAll must be called with a global RegExp");
+              return text.replace(search, replacement);
+            }
+            return text.split(String(search)).join(String(replacement));
+          };
+        }
+        if (!Array.prototype.at) {
+          Array.prototype.at = function (index) {
+            var i = Math.trunc(index) || 0;
+            if (i < 0) i += this.length;
+            if (i < 0 || i >= this.length) return undefined;
+            return this[i];
+          };
+        }
+        if (typeof Object.hasOwn !== "function") {
+          Object.hasOwn = function (obj, key) {
+            return Object.prototype.hasOwnProperty.call(obj, key);
+          };
+        }
+        function showWebViewHelp() {
+          var el = document.getElementById("webview-fallback");
+          if (!el || el.getAttribute("data-shown") === "1") return;
+          el.setAttribute("data-shown", "1");
+          el.hidden = false;
+        }
+        window.addEventListener(
+          "error",
+          function (event) {
+            if (!window.__ttBooted) {
+              showWebViewHelp();
+              return;
+            }
+            var target = event.target;
+            if (target && target.tagName === "SCRIPT") {
+              showWebViewHelp();
+              return;
+            }
+            var message = event.message ? String(event.message) : "";
+            if (message.indexOf("Unexpected token") !== -1 || message.indexOf("SyntaxError") !== -1) {
+              showWebViewHelp();
+            }
+          },
+          true,
+        );
+        setTimeout(function () {
+          if (window.__ttBooted) return;
+          var root = document.getElementById("root");
+          if (!root || !root.childNodes.length) showWebViewHelp();
+        }, 4000);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

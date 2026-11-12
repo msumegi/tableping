@@ -16,6 +16,18 @@ import {
   INSTALL_IPHONE,
   INSTALL_NO_ACCOUNT,
   locationHintCopy,
+  LOCATION_OFF_HINT,
+  LOCATION_ASK,
+  OPEN_LOCATION_SETTINGS,
+  PERMISSION_LOCATION,
+  PERMISSION_NEARBY,
+  OPEN_APP_SETTINGS,
+  HERE_NOTE_HINT,
+  HERE_NOTE_PLACEHOLDER,
+  BLUETOOTH_OFF_HINT,
+  TURN_ON_BLUETOOTH,
+  LISTS_TOO_BIG,
+  OLDER_APP_HINT,
   NEARBY_LEDE,
   PING_HERE,
   PRIVACY_FAN,
@@ -64,9 +76,39 @@ describe("join and first-run copy", () => {
   });
 
   it("uses location for close-by, not a shop list", () => {
-    expect(locationHintCopy()).toMatch(/close/i);
+    expect(locationHintCopy()).toBe("Bluetooth finds who is close in the room. Keep Bluetooth on.");
+    expect(locationHintCopy()).not.toMatch(/history/i);
     expect(locationHintCopy()).not.toMatch(/hint the shop/i);
     expect(locationHintCopy()).not.toMatch(/break GPS|basements often/i);
+  });
+
+  it("tells Android 11 and older to turn Location on, without using GPS", () => {
+    expect(LOCATION_OFF_HINT).toBe(
+      "Turn on Location to find traders. Android 11 and older need Location on for Bluetooth to see nearby phones. TableTrade does not use your GPS position.",
+    );
+    expect(OPEN_LOCATION_SETTINGS).toBe("Open Location settings");
+    expect(LOCATION_ASK).toMatch(/never reads your position/);
+    expect(PERMISSION_LOCATION).toMatch(/Allow Location/);
+    expect(PERMISSION_NEARBY).toMatch(/Nearby devices/);
+    expect(OPEN_APP_SETTINGS).toBe("Open app settings");
+    expect(HERE_NOTE_HINT).not.toMatch(/Red hoodie/);
+    expect(HERE_NOTE_PLACEHOLDER).toMatch(/Red hoodie/);
+    expect(BLUETOOTH_OFF_HINT).toMatch(/Turn Bluetooth on/);
+    expect(TURN_ON_BLUETOOTH).toBe("Turn on Bluetooth");
+    expect(LISTS_TOO_BIG).toMatch(/too big to send/);
+    expect(OLDER_APP_HINT).toBe("Someone nearby has an older TableTrade. Ask them to update.");
+    expect(app).toContain("OLDER_APP_HINT");
+    expect(app).toContain("LISTS_TOO_BIG");
+    expect(app).toContain("!isStandalonePwa() && !Capacitor.isNativePlatform()");
+    expect(app).toContain("showInstall={!Capacitor.isNativePlatform()}");
+    expect(HAVE_FIRST_RUN_PRIVACY).toMatch(/encrypted Bluetooth/);
+    expect(PRIVACY_LISTS).toMatch(/encrypted Bluetooth/);
+    expect(PRIVACY_LISTS).toMatch(/Anyone using TableTrade nearby can read them/);
+    expect(PRIVACY_LISTS).not.toMatch(/Anyone looking nearby/);
+    expect(app).toContain("OPEN_LOCATION_SETTINGS");
+    expect(app).toContain("TURN_ON_BLUETOOTH");
+    expect(app).toContain("openPhoneLocationSettings");
+    expect(app).toContain("appStateChange");
   });
 
   it("does not offer a table code or QR", () => {

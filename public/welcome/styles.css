@@ -1,3 +1,67 @@
+@font-face {
+  font-family: Outfit;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/outfit-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: Outfit;
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/outfit-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: Outfit;
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/outfit-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: Outfit;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/outfit-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: Fraunces;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/fraunces-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: Fraunces;
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/fraunces-500-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: Fraunces;
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/fraunces-700-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/plex-mono-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/plex-mono-600.woff2") format("woff2");
+}
+
 :root {
   --night: #0c1612;
   --felt: #143326;
@@ -36,6 +100,7 @@ body {
 }
 
 body {
+  min-height: 100vh;
   min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
@@ -64,6 +129,10 @@ a {
 .lamp {
   pointer-events: none;
   position: absolute;
+  top: -12%;
+  right: -20%;
+  left: -20%;
+  bottom: auto;
   inset: -12% -20% auto;
   height: 54vh;
   background:
@@ -74,6 +143,10 @@ a {
 .felt-grain {
   pointer-events: none;
   position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   opacity: 0.09;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -281,6 +354,10 @@ h1 {
 .table-art::before {
   content: "";
   position: absolute;
+  top: 18px;
+  right: 18px;
+  bottom: 18px;
+  left: 18px;
   inset: 18px;
   border-radius: 999px;
   border: 2px solid rgba(245, 215, 110, 0.12);
@@ -495,9 +572,15 @@ h1 {
 }
 
 @keyframes ping {
-  0% { opacity: 0.55; scale: 0.72; }
-  70% { opacity: 0; scale: 1.15; }
-  100% { opacity: 0; scale: 1.15; }
+  0% { opacity: 0.55; transform: scale(0.72); }
+  70% { opacity: 0; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+
+@supports not (inset: 0) {
+  .top > * + * {
+    margin-left: 16px;
+  }
 }
 
 @media (min-width: 760px) {

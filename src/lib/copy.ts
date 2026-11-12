@@ -4,7 +4,7 @@ export function checkInHint(on: boolean): string {
 }
 
 export function locationHintCopy(): string {
-  return "Bluetooth finds who is close in the room. Keep Bluetooth on. This phone does not keep a history.";
+  return "Bluetooth finds who is close in the room. Keep Bluetooth on.";
 }
 
 export const HAVE_LEDE = "Cards you’d trade here, now.";
@@ -25,7 +25,7 @@ export const HAVE_FIRST_RUN_TITLE = "Here. Close by.";
 export const HAVE_FIRST_RUN_BODY =
   "Add a few haves and wants. Tap I’m looking when you get here. If the lists overlap and you are close, both phones fire. Then you talk.";
 
-export const HAVE_FIRST_RUN_PRIVACY = "No password. Looking uses Bluetooth to phones close by.";
+export const HAVE_FIRST_RUN_PRIVACY = "No password. Looking uses encrypted Bluetooth to phones close by.";
 
 export const INSTALL_HEADING = "Add to Home Screen";
 
@@ -36,7 +36,7 @@ export const INSTALL_IPHONE = "iPhone: Safari → Share → Add to Home Screen."
 export const INSTALL_ANDROID = "Android: Chrome menu → Add to Home screen or Install app.";
 
 export const PRIVACY_LISTS =
-  "Lists stay on the phone until you tap I’m looking. Then your name and those cards go over Bluetooth to phones close by.";
+  "Lists stay on the phone until you tap I’m looking. Then your name and those cards go over encrypted Bluetooth to phones close by. Anyone using TableTrade nearby can read them. A phone that only listens cannot.";
 
 export const PRIVACY_PING = "A ping when someone close by is a match. Same room, not across town.";
 
@@ -50,7 +50,9 @@ export const LEAVE_LOOKING = "Done looking";
 
 export const HERE_NOTE_LABEL = "I’m over here";
 
-export const HERE_NOTE_HINT = "Red hoodie. Back table. Optional.";
+export const HERE_NOTE_PLACEHOLDER = "Red hoodie. Back table.";
+
+export const HERE_NOTE_HINT = "Optional. So they can spot you in the room.";
 
 export const HERE_NOTE_MAX = 40;
 
@@ -77,6 +79,31 @@ export const AGE_NO = "I’m not";
 export const AGE_BLOCKED = "TableTrade is for people 13 or older.";
 
 export const RADIO_DOWN = "Looking needs Bluetooth on this phone.";
+
+export const LOCATION_OFF_HINT =
+  "Turn on Location to find traders. Android 11 and older need Location on for Bluetooth to see nearby phones. TableTrade does not use your GPS position.";
+
+export const LOCATION_ASK =
+  "Android will ask to use Location. TableTrade needs it only so Bluetooth can find nearby phones. It never reads your position.";
+
+export const PERMISSION_LOCATION =
+  "Allow Location so Bluetooth can find nearby phones. TableTrade does not use your GPS position.";
+
+export const PERMISSION_NEARBY = "Allow Nearby devices, then tap I’m looking.";
+
+export const OPEN_APP_SETTINGS = "Open app settings";
+
+export const OPEN_LOCATION_SETTINGS = "Open Location settings";
+
+export const BLUETOOTH_OFF_HINT =
+  "Turn Bluetooth on to find traders. Looking talks to phones close by over Bluetooth.";
+
+export const TURN_ON_BLUETOOTH = "Turn on Bluetooth";
+
+export const LISTS_TOO_BIG =
+  "These lists are too big to send over Bluetooth. Remove a few cards and try again.";
+
+export const OLDER_APP_HINT = "Someone nearby has an older TableTrade. Ask them to update.";
 
 export const HEAR_AGAIN = "Hear pings again";
 
