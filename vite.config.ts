@@ -4,8 +4,25 @@ import { VitePWA } from "vite-plugin-pwa";
 
 const base = process.env.VITE_BASE || "/";
 
+/** Downlevel to Chrome 69 (Android 9 System WebView). es2018 drops ?? and ?.; chrome69 is the same floor. */
+const chrome69Target = ["es2018", "chrome69"] as const;
+
 export default defineConfig({
   base,
+  esbuild: {
+    target: "es2018",
+  },
+  build: {
+    target: [...chrome69Target],
+    cssTarget: "chrome69",
+    rollupOptions: {
+      output: {
+        // Capacitor's web builds use import(), which Chrome 69 can run but which
+        // is newer than ES2018. Inlining removes that syntax from the shipped bundle.
+        inlineDynamicImports: true,
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
@@ -17,6 +34,7 @@ export default defineConfig({
         // Marketing page is a real static file. Do not serve the SPA shell for /welcome/.
         globIgnores: ["**/welcome/**"],
         navigateFallbackDenylist: [/\/welcome(?:\/|$)/],
+        importScripts: ["chrome69-sw.js"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/images\.pokemontcg\.io\/.*/i,
@@ -64,6 +82,9 @@ export default defineConfig({
   ],
   optimizeDeps: {
     exclude: ["tesseract.js"],
+    esbuildOptions: {
+      target: [...chrome69Target],
+    },
   },
   server: {
     port: 5173,

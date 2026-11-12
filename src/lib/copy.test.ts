@@ -87,6 +87,8 @@ describe("join and first-run copy", () => {
     expect(OLDER_APP_HINT).toBe("Someone nearby has an older TableTrade. Ask them to update.");
     expect(app).toContain("OLDER_APP_HINT");
     expect(app).toContain("LISTS_TOO_BIG");
+    expect(app).toContain("!isStandalonePwa() && !Capacitor.isNativePlatform()");
+    expect(app).toContain("showInstall={!Capacitor.isNativePlatform()}");
     expect(HAVE_FIRST_RUN_PRIVACY).toMatch(/encrypted Bluetooth/);
     expect(PRIVACY_LISTS).toMatch(/encrypted Bluetooth/);
     expect(PRIVACY_LISTS).toMatch(/Anyone looking nearby can read them/);

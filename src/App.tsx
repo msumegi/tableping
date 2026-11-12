@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { App as CapApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 import type { Card, MatchSource, Presence, Settings, Tab, TradeMatch } from "./types";
 import { AddCardSheet } from "./AddCardSheet";
 import { ProfilePhotoSheet } from "./ProfilePhotoSheet";
@@ -359,7 +360,7 @@ export default function App() {
             lede={HAVE_LEDE}
             cards={have}
             empty="Nothing yet. Add a card you’d trade."
-            intro={have.length === 0 ? <HaveFirstRun showInstall={!isStandalonePwa()} /> : null}
+            intro={have.length === 0 ? <HaveFirstRun showInstall={!isStandalonePwa() && !Capacitor.isNativePlatform()} /> : null}
             onAdd={() => setAddingFor("have")}
             onRemove={(id) => setHave((prev) => removeCard(prev, id))}
           />
@@ -400,6 +401,7 @@ export default function App() {
           <YouPane
             settings={settings}
             installed={isStandalonePwa()}
+            showInstall={!Capacitor.isNativePlatform()}
             onName={(displayName) => remember({ ...settings, displayName })}
             onLookingNote={(lookingNote) => remember({ ...settings, lookingNote })}
             onOpenPhoto={() => setShowPhoto(true)}
@@ -644,6 +646,7 @@ function NearbyPane({
 function YouPane({
   settings,
   installed,
+  showInstall,
   onName,
   onLookingNote,
   onOpenPhoto,
@@ -653,6 +656,7 @@ function YouPane({
 }: {
   settings: Settings;
   installed: boolean;
+  showInstall: boolean;
   onName: (name: string) => void;
   onLookingNote: (note: string) => void;
   onOpenPhoto: () => void;
@@ -742,20 +746,24 @@ function YouPane({
           <a href={SITE_PRIVACY}>Privacy</a>
         </li>
       </ul>
-      <h3 className="panel-title">{INSTALL_HEADING}</h3>
-      {installed ? (
-        <p className="lede">On your home screen. {INSTALL_NO_ACCOUNT}</p>
-      ) : (
-        <div className="you-card stack">
-          <p className="hint">{INSTALL_NO_ACCOUNT}</p>
-          <p className="lede" style={{ margin: 0 }}>
-            {INSTALL_IPHONE}
-          </p>
-          <p className="lede" style={{ margin: 0 }}>
-            {INSTALL_ANDROID}
-          </p>
-        </div>
-      )}
+      {showInstall ? (
+        <>
+          <h3 className="panel-title">{INSTALL_HEADING}</h3>
+          {installed ? (
+            <p className="lede">On your home screen. {INSTALL_NO_ACCOUNT}</p>
+          ) : (
+            <div className="you-card stack">
+              <p className="hint">{INSTALL_NO_ACCOUNT}</p>
+              <p className="lede" style={{ margin: 0 }}>
+                {INSTALL_IPHONE}
+              </p>
+              <p className="lede" style={{ margin: 0 }}>
+                {INSTALL_ANDROID}
+              </p>
+            </div>
+          )}
+        </>
+      ) : null}
     </section>
   );
 }
