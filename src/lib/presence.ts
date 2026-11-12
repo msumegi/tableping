@@ -7,10 +7,15 @@ export const PRESENCE_TTL_MS = 45_000;
 const HEARTBEAT_MS = 12_000;
 const PUBLIC_HIVE = /broker\.hivemq\.com/i;
 
-export function mqttBrokerUrl(): string | null {
-  const raw = (import.meta.env.VITE_MQTT_URL as string | undefined)?.trim() || "";
-  if (!raw) return null;
-  if (PUBLIC_HIVE.test(raw)) return null;
+/**
+ * Production builds never publish the profile. The broker path is plaintext,
+ * and a release build must not send it. Dev can still point at a private broker.
+ */
+export function mqttBrokerUrl(opts?: { prod?: boolean; url?: string }): string | null {
+  const prod = opts?.prod ?? Boolean(import.meta.env.PROD);
+  const raw = (opts && "url" in opts ? opts.url : (import.meta.env.VITE_MQTT_URL as string | undefined))?.trim() || "";
+  if (prod) return null;
+  if (!raw || PUBLIC_HIVE.test(raw)) return null;
   return raw;
 }
 
@@ -43,7 +48,8 @@ function slimPresence(presence: Presence): Presence {
 /**
  * Live presence for two phones that are looking and close enough.
  * Geo cells are the room. Needs a private broker URL (VITE_MQTT_URL).
- * The old public HiveMQ demo broker is refused.
+ * The old public HiveMQ demo broker is refused. A production build
+ * cannot publish here at all, so this path never sends plaintext in release.
  */
 export async function connectPresenceHub(onMessage: Handler): Promise<PresenceHub> {
   const broker = mqttBrokerUrl();

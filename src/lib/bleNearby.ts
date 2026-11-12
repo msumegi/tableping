@@ -6,14 +6,65 @@ type NearbyNative = {
   start(options: { payload: string; userId: string }): Promise<void>;
   setPayload(options: { payload: string }): Promise<void>;
   stop(): Promise<void>;
+  openLocationSettings(): Promise<void>;
+  requestEnableBluetooth(): Promise<void>;
   addListener(eventName: "peer", listener: (ev: { payload: string }) => void): Promise<PluginListenerHandle>;
 };
 
 const native = registerPlugin<NearbyNative>("TableTradeNearby");
 
+/**
+ * v2 wire frame, matching BleCrypto.java:
+ * version (1) + uncompressed P-256 key (65) + nonce (12) + AES-GCM ciphertext and tag (plaintext + 16).
+ * ATT payload at MTU 517 is 514 bytes, so the profile JSON must stay within 420 bytes.
+ */
+export const BLE_PROTOCOL_VERSION = 2;
+export const BLE_PUBKEY_LEN = 65;
+export const BLE_NONCE_LEN = 12;
+export const BLE_TAG_LEN = 16;
+export const BLE_VERSION_LEN = 1;
+export const BLE_FRAME_OVERHEAD = BLE_VERSION_LEN + BLE_PUBKEY_LEN + BLE_NONCE_LEN + BLE_TAG_LEN;
+export const BLE_TARGET_MTU = 517;
+export const BLE_ATT_HEADER = 3;
+export const BLE_MAX_FRAME = BLE_TARGET_MTU - BLE_ATT_HEADER;
+export const BLE_MAX_PLAINTEXT = BLE_MAX_FRAME - BLE_FRAME_OVERHEAD;
+
+export function nearbyFrameLength(plaintextBytes: number): number {
+  return plaintextBytes + BLE_FRAME_OVERHEAD;
+}
+
+export function plaintextFitsTargetMtu(plaintextBytes: number): boolean {
+  return plaintextBytes >= 0 && nearbyFrameLength(plaintextBytes) <= BLE_MAX_FRAME;
+}
+
+export type NearbyBlock = "location" | "bluetooth";
+
+export function nearbyBlockFromError(err: unknown): NearbyBlock | null {
+  const code = readField(err, "code");
+  const message = err instanceof Error ? err.message : readField(err, "message");
+  const hay = `${code}\n${message}`;
+  if (hay.includes("LOCATION_OFF")) return "location";
+  if (hay.includes("BLUETOOTH_OFF")) return "bluetooth";
+  return null;
+}
+
+function readField(err: unknown, key: string): string {
+  if (!err || typeof err !== "object" || !(key in err)) return "";
+  const value = (err as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : "";
+}
+
 /** Same JS calls later on iPhone. Android implements them first. */
 export function canUsePhoneNearby(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+}
+
+export function openPhoneLocationSettings(): Promise<void> {
+  return native.openLocationSettings();
+}
+
+export function requestPhoneBluetooth(): Promise<void> {
+  return native.requestEnableBluetooth();
 }
 
 function cardIds(cards: Card[], n: number): string[] {
@@ -26,6 +77,10 @@ function cardIds(cards: Card[], n: number): string[] {
     if (out.length >= n) break;
   }
   return out;
+}
+
+function utf8Bytes(s: string): number {
+  return new TextEncoder().encode(s).length;
 }
 
 export function encodeNearbyPayload(p: Presence): string {
@@ -41,9 +96,9 @@ export function encodeNearbyPayload(p: Presence): string {
       ts: p.ts,
     });
   let raw = pack(haveN, wantN);
-  while (raw.length > 450 && (haveN > 4 || wantN > 4)) {
-    if (haveN >= wantN && haveN > 4) haveN -= 1;
-    else if (wantN > 4) wantN -= 1;
+  while (utf8Bytes(raw) > BLE_MAX_PLAINTEXT && (haveN > 0 || wantN > 0)) {
+    if (haveN >= wantN && haveN > 0) haveN -= 1;
+    else if (wantN > 0) wantN -= 1;
     else break;
     raw = pack(haveN, wantN);
   }

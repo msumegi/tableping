@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { App as CapApp } from "@capacitor/app";
 import type { Card, MatchSource, Presence, Settings, Tab, TradeMatch } from "./types";
 import { AddCardSheet } from "./AddCardSheet";
 import { ProfilePhotoSheet } from "./ProfilePhotoSheet";
@@ -51,6 +52,10 @@ import {
   AGE_NO,
   AGE_BLOCKED,
   RADIO_DOWN,
+  LOCATION_OFF_HINT,
+  OPEN_LOCATION_SETTINGS,
+  BLUETOOTH_OFF_HINT,
+  TURN_ON_BLUETOOTH,
   HEAR_AGAIN,
   REPORT_PEER,
   MATCH_PRINTING,
@@ -59,7 +64,15 @@ import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
 import { kindLabel, matchAgainst, sourceLabel } from "./lib/match";
 import { compressProfilePhoto, initialsFromName } from "./lib/photo";
 import { connectLocalHub } from "./lib/presence";
-import { canUsePhoneNearby, startPhoneNearby, updatePhoneNearby } from "./lib/bleNearby";
+import {
+  canUsePhoneNearby,
+  nearbyBlockFromError,
+  openPhoneLocationSettings,
+  requestPhoneBluetooth,
+  startPhoneNearby,
+  updatePhoneNearby,
+  type NearbyBlock,
+} from "./lib/bleNearby";
 
 const TABS: { id: Tab; ico: string; lbl: string }[] = [
   { id: "have", ico: "▣", lbl: "Have" },
@@ -77,6 +90,7 @@ export default function App() {
   const [live, setLive] = useState(false);
   const [looking, setLooking] = useState(false);
   const [hintStatus, setHintStatus] = useState("");
+  const [radioBlock, setRadioBlock] = useState<NearbyBlock | null>(null);
   const [brokerStatus] = useState<"idle" | "live" | "error">("idle");
   const [matches, setMatches] = useState<TradeMatch[]>([]);
   const [activePing, setActivePing] = useState<TradeMatch | null>(null);
@@ -89,6 +103,10 @@ export default function App() {
   const wantRef = useRef(want);
   const settingsRef = useRef(settings);
   const stopNearbyRef = useRef<null | (() => void)>(null);
+  const pendingBlockRef = useRef<NearbyBlock | null>(null);
+  const lookingRef = useRef(false);
+  const startingRef = useRef(false);
+  const startLookingRef = useRef<() => void>(() => {});
   const seenRef = useRef<Set<string>>(new Set(loadSeenMatchIds()));
 
   haveRef.current = have;
@@ -115,31 +133,92 @@ export default function App() {
   }
 
   async function startLooking() {
+    if (lookingRef.current || startingRef.current) return;
+    startingRef.current = true;
     setHintStatus("Turning looking on…");
-    if (canUsePhoneNearby()) {
-      try {
-        stopNearbyRef.current = await startPhoneNearby(currentPresence(), (peer) => ingestPeer(peer, "ble"));
+    try {
+      if (canUsePhoneNearby()) {
+        try {
+          stopNearbyRef.current = await startPhoneNearby(currentPresence(), (peer) => ingestPeer(peer, "ble"));
+          pendingBlockRef.current = null;
+          setRadioBlock(null);
+          setLooking(true);
+          lookingRef.current = true;
+          setLive(true);
+          setHintStatus("");
+          setTab("nearby");
+        } catch (err) {
+          const block = nearbyBlockFromError(err);
+          pendingBlockRef.current = block;
+          setRadioBlock(block);
+          if (block === "location") setHintStatus(LOCATION_OFF_HINT);
+          else if (block === "bluetooth") setHintStatus(BLUETOOTH_OFF_HINT);
+          else setHintStatus(err instanceof Error ? err.message : RADIO_DOWN);
+        }
+        return;
+      }
+      if (import.meta.env.DEV) {
+        pendingBlockRef.current = null;
+        setRadioBlock(null);
         setLooking(true);
+        lookingRef.current = true;
         setLive(true);
         setHintStatus("");
         setTab("nearby");
-      } catch (err) {
-        setHintStatus(err instanceof Error ? err.message : RADIO_DOWN);
+        return;
       }
-      return;
+      setHintStatus(RADIO_DOWN);
+    } finally {
+      startingRef.current = false;
     }
-    if (import.meta.env.DEV) {
-      setLooking(true);
-      setLive(true);
-      setHintStatus("");
-      setTab("nearby");
-      return;
+  }
+
+  startLookingRef.current = () => {
+    void startLooking();
+  };
+
+  useEffect(() => {
+    let removed = false;
+    let handle: { remove: () => Promise<void> | void } | undefined;
+    void CapApp.addListener("appStateChange", ({ isActive }) => {
+      if (!isActive || !pendingBlockRef.current || lookingRef.current) return;
+      startLookingRef.current();
+    }).then((sub) => {
+      if (removed) void sub.remove();
+      else handle = sub;
+    }).catch(() => {});
+    return () => {
+      removed = true;
+      void handle?.remove();
+    };
+  }, []);
+
+  async function openLocationSettings() {
+    try {
+      await openPhoneLocationSettings();
+    } catch {
+      setHintStatus(LOCATION_OFF_HINT);
+      setRadioBlock("location");
+      pendingBlockRef.current = "location";
     }
-    setHintStatus(RADIO_DOWN);
+  }
+
+  async function enableBluetooth() {
+    try {
+      await requestPhoneBluetooth();
+      await startLooking();
+    } catch {
+      setHintStatus(BLUETOOTH_OFF_HINT);
+      setRadioBlock("bluetooth");
+      pendingBlockRef.current = "bluetooth";
+    }
   }
 
   function stopLooking() {
     setLooking(false);
+    lookingRef.current = false;
+    pendingBlockRef.current = null;
+    setRadioBlock(null);
     setLive(false);
     stopNearbyRef.current?.();
     stopNearbyRef.current = null;
@@ -293,6 +372,9 @@ export default function App() {
             onLookingNote={(lookingNote) => remember({ ...settings, lookingNote })}
             onStartLooking={startLooking}
             onStopLooking={stopLooking}
+            radioBlock={radioBlock}
+            onOpenLocationSettings={() => void openLocationSettings()}
+            onEnableBluetooth={() => void enableBluetooth()}
             onDemo={fireDemo}
             onHearAgain={hearAgain}
             onOpenPing={setActivePing}
@@ -411,6 +493,9 @@ function NearbyPane({
   onLookingNote,
   onStartLooking,
   onStopLooking,
+  radioBlock,
+  onOpenLocationSettings,
+  onEnableBluetooth,
   onDemo,
   onHearAgain,
   onOpenPing,
@@ -426,6 +511,9 @@ function NearbyPane({
   onLookingNote: (note: string) => void;
   onStartLooking: () => void;
   onStopLooking: () => void;
+  radioBlock: NearbyBlock | null;
+  onOpenLocationSettings: () => void;
+  onEnableBluetooth: () => void;
   onDemo: () => void;
   onHearAgain: () => void;
   onOpenPing: (m: TradeMatch) => void;
@@ -479,6 +567,16 @@ function NearbyPane({
               {CHECKIN_CTA}
             </button>
             {hintStatus ? <p className="hint">{hintStatus}</p> : null}
+            {radioBlock === "location" ? (
+              <button className="btn secondary full" onClick={onOpenLocationSettings}>
+                {OPEN_LOCATION_SETTINGS}
+              </button>
+            ) : null}
+            {radioBlock === "bluetooth" ? (
+              <button className="btn secondary full" onClick={onEnableBluetooth}>
+                {TURN_ON_BLUETOOTH}
+              </button>
+            ) : null}
           </>
         )}
       </div>
