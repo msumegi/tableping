@@ -129,7 +129,8 @@ public class BleCryptoTest {
         byte[] frame = BleCrypto.sealClientToServer(client, server.publicKey(), plain);
         assertEquals(BleCrypto.MAX_FRAME, frame.length);
         assertFalse(BleCrypto.frameFitsSinglePacket(frame.length, BleCrypto.TARGET_MTU));
-        byte[] back = reassemble(frame, BleCrypto.TARGET_MTU);
+        byte[] back = androidClientRead(frame, BleCrypto.TARGET_MTU);
+        assertArrayEquals(frame, back);
         assertArrayEquals(plain, BleCrypto.openClientToServer(server, back, new BleCrypto.NonceWindow()).plaintext);
         try {
             BleCrypto.sealClientToServer(client, server.publicKey(), new byte[BleCrypto.MAX_PLAINTEXT + 1]);
@@ -140,7 +141,7 @@ public class BleCryptoTest {
     }
 
     @Test
-    public void maxCardListSurvivesMtu517AndMtu23() throws Exception {
+    public void maxCardListSurvivesMtu23_185_and517BothWays() throws Exception {
         String[] have = new String[12];
         String[] want = new String[12];
         for (int i = 0; i < 12; i++) {
@@ -174,66 +175,110 @@ public class BleCryptoTest {
         assertFalse(BleCrypto.frameFitsSinglePacket(frame.length, 517));
         assertFalse(BleCrypto.frameFitsSinglePacket(frame.length, 23));
 
-        for (int mtu : new int[] { 517, 23 }) {
-            byte[] joined = reassemble(frame, mtu);
-            assertArrayEquals(frame, joined);
-            String text = new String(
-                    BleCrypto.openClientToServer(server, joined, new BleCrypto.NonceWindow()).plaintext,
+        byte[] hello = BleCrypto.handshake(server.publicKey());
+        assertEquals(BleCrypto.HANDSHAKE_LEN, hello.length);
+        assertArrayEquals(hello, androidClientRead(hello, 23));
+        byte[] reply = BleCrypto.sealServerToClient(server, client.publicKey(), plain);
+        for (int mtu : new int[] { 23, 185, 517 }) {
+            byte[] written = androidPreparedWrite(frame, mtu);
+            assertArrayEquals(frame, written);
+            String fromClient = new String(
+                    BleCrypto.openClientToServer(server, written, new BleCrypto.NonceWindow()).plaintext,
                     StandardCharsets.UTF_8);
-            for (String id : have) assertTrue(text.contains("\"" + id + "\""));
-            for (String id : want) assertTrue(text.contains("\"" + id + "\""));
-            assertTrue(text.contains("N".repeat(24)));
-            assertTrue(text.contains("O".repeat(40)));
+            byte[] read = androidClientRead(reply, mtu);
+            assertArrayEquals(reply, read);
+            String fromServer = new String(
+                    BleCrypto.openServerToClient(client, server.publicKey(), read, new BleCrypto.NonceWindow()),
+                    StandardCharsets.UTF_8);
+            for (String text : new String[] { fromClient, fromServer }) {
+                for (String id : have) assertTrue(text.contains("\"" + id + "\""));
+                for (String id : want) assertTrue(text.contains("\"" + id + "\""));
+                assertTrue(text.contains("N".repeat(24)));
+                assertTrue(text.contains("O".repeat(40)));
+            }
         }
+        int exactMtu = 23;
+        byte[] exact = new byte[(exactMtu - 1) * 3];
+        java.util.Arrays.fill(exact, (byte) 7);
+        assertArrayEquals(exact, androidClientRead(exact, exactMtu));
+        byte[] shortFirst = new byte[100];
+        assertTrue(stopAfterShortChunk(shortFirst, 23, 23 - 3).length < shortFirst.length);
         assertTrue(BleCrypto.isLegacyPayload("old or unknown protocol version"));
         assertTrue(BleCrypto.isLegacyPayload("unencrypted payload rejected"));
         assertFalse(BleCrypto.isLegacyPayload("authentication failed"));
         assertFalse(BleCrypto.isLegacyPayload("replayed nonce"));
     }
 
-    private static byte[] reassemble(byte[] frame, int mtu) throws Exception {
+    /**
+     * AOSP gatt_cl.cc keeps reading only while the response length is exactly MTU−1.
+     * The server offers every remaining byte; the stack trims that to MTU−1.
+     * A shorter first chunk ends the read.
+     */
+    private static byte[] androidClientRead(byte[] value, int mtu) {
+        int full = mtu - 1;
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int offset = 0;
+        while (true) {
+            byte[] offered = BleCrypto.readResponse(value, offset);
+            int len = Math.min(full, offered.length);
+            if (len > 0) out.write(offered, 0, len);
+            offset += len;
+            if (len != full) break;
+        }
+        return out.toByteArray();
+    }
+
+    private static byte[] stopAfterShortChunk(byte[] value, int mtu, int serverSlice) {
+        int full = mtu - 1;
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int offset = 0;
+        int len = Math.min(serverSlice, Math.max(0, value.length - offset));
+        if (len > 0) out.write(value, offset, len);
+        if (len == full && offset + len < value.length) {
+            throw new AssertionError("a short slice must not look full");
+        }
+        return out.toByteArray();
+    }
+
+    /** Prepared writes carry at most MTU−3 bytes of value. The server appends by offset. */
+    private static byte[] androidPreparedWrite(byte[] value, int mtu) throws Exception {
+        int chunk = Math.max(1, mtu - BleCrypto.ATT_HEADER);
         BleCrypto.WriteAssembler asm = new BleCrypto.WriteAssembler();
         int offset = 0;
-        while (offset < frame.length) {
-            byte[] slice = BleCrypto.sliceForMtu(frame, offset, mtu);
-            assertTrue(slice.length > 0);
-            assertTrue(slice.length <= mtu - BleCrypto.ATT_HEADER);
-            asm.append(offset, slice);
-            offset += slice.length;
+        while (offset < value.length) {
+            int len = Math.min(chunk, value.length - offset);
+            asm.append(offset, Arrays.copyOfRange(value, offset, offset + len));
+            offset += len;
         }
         return asm.finish();
     }
 
     @Test
-    public void lowMtuChunksReassembleThenDecrypt() throws Exception {
+    public void badPublicKeysAreRejectedWithoutACrash() throws Exception {
         BleCrypto.Ephemeral server = BleCrypto.generate();
-        BleCrypto.Ephemeral client = BleCrypto.generate();
-        byte[] plain = "profile-across-small-mtu".getBytes(StandardCharsets.UTF_8);
-        byte[] frame = BleCrypto.sealClientToServer(client, server.publicKey(), plain);
-        assertFalse(BleCrypto.frameFitsSinglePacket(frame.length, 23));
-
-        BleCrypto.WriteAssembler asm = new BleCrypto.WriteAssembler();
-        int offset = 0;
-        int chunk = 23 - BleCrypto.ATT_HEADER;
-        while (offset < frame.length) {
-            int n = Math.min(chunk, frame.length - offset);
-            asm.append(offset, Arrays.copyOfRange(frame, offset, offset + n));
-            offset += n;
+        byte[] frame = new byte[BleCrypto.OVERHEAD];
+        frame[0] = (byte) BleCrypto.VERSION;
+        byte[] offCurve = new byte[65];
+        offCurve[0] = 0x04;
+        System.arraycopy(offCurve, 0, frame, 1, 65);
+        try {
+            BleCrypto.openClientToServer(server, frame, new BleCrypto.NonceWindow());
+            fail("off-curve key opened");
+        } catch (BleCrypto.Rejected e) {
+            assertEquals("bad public key", e.getMessage());
         }
-        byte[] joined = asm.finish();
-        assertArrayEquals(frame, joined);
-        assertArrayEquals(plain, BleCrypto.openClientToServer(server, joined, new BleCrypto.NonceWindow()).plaintext);
-
-        byte[] hello = BleCrypto.handshake(server.publicKey());
-        byte[] rebuilt = new byte[hello.length];
-        int at = 0;
-        while (at < hello.length) {
-            byte[] slice = BleCrypto.sliceForMtu(hello, at, 23);
-            assertTrue(slice.length <= 20);
-            System.arraycopy(slice, 0, rebuilt, at, slice.length);
-            at += slice.length;
+        byte[] tooBig = new byte[65];
+        tooBig[0] = 0x04;
+        Arrays.fill(tooBig, 1, 65, (byte) 0xff);
+        System.arraycopy(tooBig, 0, frame, 1, 65);
+        try {
+            BleCrypto.openClientToServer(server, frame, new BleCrypto.NonceWindow());
+            fail("oversized coordinate opened");
+        } catch (BleCrypto.Rejected e) {
+            assertEquals("bad public key", e.getMessage());
+        } catch (RuntimeException e) {
+            fail("runtime exception escaped: " + e);
         }
-        assertArrayEquals(hello, rebuilt);
     }
 
     @Test

@@ -38,30 +38,36 @@ public class NearbyStartGateTest {
         assertEquals(NearbyStartGate.BLUETOOTH_OFF, NearbyStartGate.blockCode(28, false, true));
         assertEquals(NearbyStartGate.BLUETOOTH_OFF, NearbyStartGate.blockCode(31, false, false));
         assertTrue(NearbyStartGate.messageFor(NearbyStartGate.BLUETOOTH_OFF).contains("Turn Bluetooth on"));
+        assertEquals(4_000L, NearbyRetry.backoffMs(1));
+        assertEquals(8_000L, NearbyRetry.backoffMs(2));
+        assertEquals(16_000L, NearbyRetry.backoffMs(3));
+        assertEquals(60_000L, NearbyRetry.backoffMs(4));
+        assertEquals(60_000L, NearbyRetry.backoffMs(9));
         String location = NearbyStartGate.messageFor(NearbyStartGate.LOCATION_OFF);
         assertTrue(location.contains("does not use your GPS position"));
         assertTrue(location.contains("Android 11 and older"));
     }
 
     @Test
-    public void advertisementIsRandomTokenNotUserIdentity() {
+    public void advertisementIsServiceDataNotACompanyId() {
         byte[] token = new byte[] { 9, 8, 7, 6 };
-        byte[] mfg = BleAdvertisement.manufacturerData(token);
-        assertEquals(6, mfg.length);
-        assertEquals('T', mfg[0]);
-        assertEquals('2', mfg[1]);
-        assertArrayEquals(token, BleAdvertisement.tokenFrom(mfg));
+        byte[] data = BleAdvertisement.serviceData(token);
+        assertEquals(6, data.length);
+        assertEquals('T', data[0]);
+        assertEquals('2', data[1]);
+        assertArrayEquals(token, BleAdvertisement.tokenFromServiceData(data));
 
         byte[] v1 = new byte[] { 'T', 'T', 1, 2, 3, 4 };
-        assertNull(BleAdvertisement.tokenFrom(v1));
+        assertNull(BleAdvertisement.tokenFromServiceData(v1));
         assertTrue(BleAdvertisement.isLegacy(v1));
-        assertFalse(BleAdvertisement.isLegacy(mfg));
+        assertFalse(BleAdvertisement.isLegacy(data));
 
         String userId = "12345678-1234-1234-1234-123456789abc";
         byte[] legacy = legacyUserHash(userId);
         byte[] legacyAd = new byte[] { 'T', 'T', legacy[0], legacy[1], legacy[2], legacy[3] };
-        assertNull(BleAdvertisement.tokenFrom(legacyAd));
-        assertFalse(new String(mfg).contains(userId));
+        assertNull(BleAdvertisement.tokenFromServiceData(legacyAd));
+        assertTrue(BleAdvertisement.isLegacy(legacyAd));
+        assertFalse(new String(data).contains(userId));
     }
 
     /** The v1 advertisement mixed a 4-byte xor of the user id into the manufacturer data. */
