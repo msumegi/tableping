@@ -32,12 +32,6 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icons/icon-192.png" />
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
     <title>TableTrade</title>
   </head>
   <body>
@@ -45,6 +39,10 @@
       TableTrade needs an update to Android System WebView. Open Google Play and update Android System WebView, then reopen TableTrade.
     </div>
     <div id="root"></div>
+    <script nomodule>
+      var el = document.getElementById("webview-fallback");
+      if (el) el.hidden = false;
+    </script>
     <script>
       (function () {
         if (typeof globalThis === "undefined") window.globalThis = window;
@@ -109,6 +107,10 @@
         window.addEventListener(
           "error",
           function (event) {
+            if (!window.__ttBooted) {
+              showWebViewHelp();
+              return;
+            }
             var target = event.target;
             if (target && target.tagName === "SCRIPT") {
               showWebViewHelp();
@@ -121,6 +123,11 @@
           },
           true,
         );
+        setTimeout(function () {
+          if (window.__ttBooted) return;
+          var root = document.getElementById("root");
+          if (!root || !root.childNodes.length) showWebViewHelp();
+        }, 4000);
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>

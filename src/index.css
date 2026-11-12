@@ -1,3 +1,46 @@
+@font-face {
+  font-family: Outfit;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/outfit-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: Outfit;
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./assets/fonts/outfit-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: Outfit;
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./assets/fonts/outfit-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: Outfit;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./assets/fonts/outfit-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: Fraunces;
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./assets/fonts/fraunces-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: Fraunces;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./assets/fonts/fraunces-700.woff2") format("woff2");
+}
+
 :root {
   --night: #12100e;
   --ink: #1c1410;
@@ -719,6 +762,16 @@ img {
   font-size: 0.82rem;
   color: var(--muted);
   margin: 0;
+}
+
+.callout.warn {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(224, 112, 112, 0.16);
+  border: 1px solid var(--danger);
+  color: var(--paper);
+  font-weight: 650;
 }
 
 .qr-box {

@@ -19,19 +19,26 @@ import android.bluetooth.le.AdvertiseSettings;
 import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanRecord;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
+import android.content.BroadcastReceiver;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.ParcelUuid;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.Log;
 
 import androidx.activity.result.ActivityResult;
+import androidx.core.app.ActivityCompat;
 import androidx.core.location.LocationManagerCompat;
 
 import com.getcapacitor.JSObject;
@@ -46,9 +53,12 @@ import com.getcapacitor.annotation.PermissionCallback;
 
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -70,7 +80,7 @@ public class NearbyPlugin extends Plugin {
     private static final String TAG = "TableTradeNearby";
     static final UUID SERVICE = UUID.fromString("74626c74-7264-4e31-8000-7461626c6574");
     static final UUID CHAR = UUID.fromString("74626c74-7264-4e31-8001-7461626c6574");
-    private static final int MFG = 0xFFFF;
+    private static final int LEGACY_COMPANY_ID = 0xFFFF;
     private static final long TOKEN_ROTATE_MS = 120_000L;
 
     private BluetoothGattServer gattServer;
@@ -84,9 +94,15 @@ public class NearbyPlugin extends Plugin {
     private PluginCall pendingStart;
     private final Set<String> delivered = new HashSet<>();
     private final Set<String> ignored = new HashSet<>();
-    private final Set<String> inFlight = new HashSet<>();
     private boolean legacyHintSent = false;
     private final Map<String, BluetoothDevice> candidates = new HashMap<>();
+    private final Map<String, Long> lastSeen = new HashMap<>();
+    private final Map<String, Integer> failures = new HashMap<>();
+    private final Map<String, Long> retryAt = new HashMap<>();
+    private final ArrayDeque<String> waitQueue = new ArrayDeque<>();
+    private String activeId;
+    private boolean pumpScheduled;
+    private boolean radioWatching;
     private final Map<String, ServerSession> sessions = new HashMap<>();
     private final Map<String, Integer> peerMtu = new HashMap<>();
     private BleCrypto.Ephemeral clientKeys;
@@ -97,10 +113,44 @@ public class NearbyPlugin extends Plugin {
         @Override
         public void run() {
             if (!running) return;
-            for (BluetoothDevice device : candidates.values()) {
-                readPeer(device, true);
+            pruneStale();
+            long now = SystemClock.elapsedRealtime();
+            for (String id : new ArrayList<>(candidates.keySet())) {
+                Long ready = retryAt.get(id);
+                if (ready != null && ready > now) continue;
+                enqueue(id);
             }
             main.postDelayed(this, 4000);
+        }
+    };
+
+    private final Runnable attemptTimeout = new Runnable() {
+        @Override
+        public void run() {
+            if (activeId == null) return;
+            Log.w(TAG, "connection attempt timed out");
+            finishAttempt(activeId, false);
+        }
+    };
+
+    private final BroadcastReceiver radioWatch = new BroadcastReceiver() {
+        @Override
+        public void onReceive(android.content.Context context, Intent intent) {
+            if (!running || intent == null) return;
+            String action = intent.getAction();
+            if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
+                int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
+                if (state == BluetoothAdapter.STATE_OFF || state == BluetoothAdapter.STATE_TURNING_OFF) {
+                    stopForRadio(NearbyStartGate.BLUETOOTH_OFF);
+                }
+            } else if (Intent.ACTION_AIRPLANE_MODE_CHANGED.equals(action)) {
+                if (intent.getBooleanExtra("state", false)) stopForRadio(NearbyStartGate.BLUETOOTH_OFF);
+            } else if (LocationManager.PROVIDERS_CHANGED_ACTION.equals(action)
+                    || LocationManager.MODE_CHANGED_ACTION.equals(action)) {
+                if (NearbyStartGate.needsSystemLocation(Build.VERSION.SDK_INT) && !systemLocationEnabled()) {
+                    stopForRadio(NearbyStartGate.LOCATION_OFF);
+                }
+            }
         }
     };
 
@@ -146,18 +196,22 @@ public class NearbyPlugin extends Plugin {
             if (result == null || result.getDevice() == null) return;
             BluetoothDevice device = result.getDevice();
             ScanRecord record = result.getScanRecord();
-            byte[] mfg = record == null ? null : record.getManufacturerSpecificData(MFG);
-            byte[] peerToken = BleAdvertisement.tokenFrom(mfg);
+            byte[] service = record == null ? null : record.getServiceData(new ParcelUuid(SERVICE));
+            byte[] peerToken = BleAdvertisement.tokenFromServiceData(service);
             if (peerToken == null) {
-                if (BleAdvertisement.isLegacy(mfg)) noteLegacy(device.getAddress());
+                byte[] legacy = record == null ? null : record.getManufacturerSpecificData(LEGACY_COMPANY_ID);
+                if (BleAdvertisement.isLegacy(legacy)) noteLegacy(device.getAddress());
                 return;
             }
-            candidates.put(device.getAddress(), device);
-            if (shouldReachOut(peerToken)) {
-                readPeer(device, false);
-            } else {
-                main.postDelayed(() -> readPeer(device, true), 2500);
-            }
+            final String id = device.getAddress();
+            final boolean reach = shouldReachOut(peerToken);
+            main.post(() -> {
+                if (!running) return;
+                lastSeen.put(id, SystemClock.elapsedRealtime());
+                candidates.put(id, device);
+                if (reach) enqueue(id);
+                else main.postDelayed(() -> enqueue(id), 2500);
+            });
         }
     };
 
@@ -190,11 +244,11 @@ public class NearbyPlugin extends Plugin {
             if (getPermissionState("scan") != PermissionState.GRANTED
                     || getPermissionState("advertise") != PermissionState.GRANTED
                     || getPermissionState("connect") != PermissionState.GRANTED) {
-                call.reject("Allow Bluetooth, then tap I’m looking.");
+                rejectPermission(call);
                 return;
             }
         } else if (getPermissionState("location") != PermissionState.GRANTED) {
-            call.reject("Allow the nearby permission, then tap I’m looking.");
+            rejectPermission(call);
             return;
         }
         begin(call);
@@ -319,9 +373,14 @@ public class NearbyPlugin extends Plugin {
         scanStarted = false;
         pendingStart = call;
         delivered.clear();
-        inFlight.clear();
         candidates.clear();
+        lastSeen.clear();
+        failures.clear();
+        retryAt.clear();
+        waitQueue.clear();
+        activeId = null;
         rollToken();
+        watchRadio();
         try {
             gattServer = mgr.openGattServer(getContext(), serverCallback);
             BluetoothGattService service = new BluetoothGattService(SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY);
@@ -386,10 +445,12 @@ public class NearbyPlugin extends Plugin {
                 .setConnectable(true)
                 .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_HIGH)
                 .build();
+        ParcelUuid service = new ParcelUuid(SERVICE);
         AdvertiseData data = new AdvertiseData.Builder()
                 .setIncludeDeviceName(false)
                 .setIncludeTxPowerLevel(false)
-                .addManufacturerData(MFG, BleAdvertisement.manufacturerData(advToken))
+                .addServiceUuid(service)
+                .addServiceData(service, BleAdvertisement.serviceData(advToken))
                 .build();
         try {
             advertiser.stopAdvertising(advertiseCallback);
@@ -413,7 +474,12 @@ public class NearbyPlugin extends Plugin {
         ScanSettings scanSettings = new ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
                 .build();
-        scanner.startScan(null, scanSettings, scanCallback);
+        java.util.List<ScanFilter> filters = new ArrayList<>();
+        filters.add(new ScanFilter.Builder().setServiceUuid(new ParcelUuid(SERVICE)).build());
+        filters.add(new ScanFilter.Builder()
+                .setManufacturerData(LEGACY_COMPANY_ID, new byte[] { 'T', 'T' }, new byte[] { (byte) 0xff, (byte) 0xff })
+                .build());
+        scanner.startScan(filters, scanSettings, scanCallback);
         main.removeCallbacks(retryBeat);
         main.postDelayed(retryBeat, 4000);
     }
@@ -435,25 +501,106 @@ public class NearbyPlugin extends Plugin {
         return true;
     }
 
+    private void enqueue(String id) {
+        if (!running || id == null) return;
+        if (ignored.contains(id) || delivered.contains(id) || id.equals(activeId)) return;
+        if (waitQueue.contains(id)) return;
+        long now = SystemClock.elapsedRealtime();
+        Long seen = lastSeen.get(id);
+        if (seen == null || now - seen > NearbyRetry.SEEN_TTL_MS) return;
+        Long ready = retryAt.get(id);
+        if (ready != null && ready > now) {
+            schedulePump(ready - now);
+            return;
+        }
+        waitQueue.addLast(id);
+        pumpQueue();
+    }
+
+    private void schedulePump(long delay) {
+        if (pumpScheduled) return;
+        pumpScheduled = true;
+        main.postDelayed(() -> {
+            pumpScheduled = false;
+            if (!running) return;
+            long now = SystemClock.elapsedRealtime();
+            for (String id : new ArrayList<>(candidates.keySet())) {
+                Long ready = retryAt.get(id);
+                if (ready == null || ready <= now) enqueue(id);
+            }
+        }, Math.max(250L, delay));
+    }
+
     @SuppressLint("MissingPermission")
-    private void readPeer(BluetoothDevice device, boolean fallback) {
-        if (!running || device == null) return;
-        final String id = device.getAddress();
-        if (ignored.contains(id) || delivered.contains(id) || inFlight.contains(id)) return;
-        if (!fallback && inFlight.contains(id)) return;
-        inFlight.add(id);
-        main.postDelayed(() -> inFlight.remove(id), 8000);
-        main.post(() -> connectPeer(device, id));
+    private void pumpQueue() {
+        if (!running || activeId != null) return;
+        pruneStale();
+        long now = SystemClock.elapsedRealtime();
+        while (!waitQueue.isEmpty()) {
+            String id = waitQueue.pollFirst();
+            if (id == null || ignored.contains(id) || delivered.contains(id)) continue;
+            Long seen = lastSeen.get(id);
+            if (seen == null || now - seen > NearbyRetry.SEEN_TTL_MS) {
+                candidates.remove(id);
+                continue;
+            }
+            Long ready = retryAt.get(id);
+            if (ready != null && ready > now) {
+                schedulePump(ready - now);
+                continue;
+            }
+            BluetoothDevice device = candidates.get(id);
+            if (device == null) continue;
+            activeId = id;
+            main.postDelayed(attemptTimeout, NearbyRetry.ATTEMPT_TIMEOUT_MS);
+            connectPeer(device, id);
+            return;
+        }
+    }
+
+    private void pruneStale() {
+        long now = SystemClock.elapsedRealtime();
+        Iterator<Map.Entry<String, Long>> it = lastSeen.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, Long> entry = it.next();
+            if (entry.getKey().equals(activeId)) continue;
+            if (now - entry.getValue() > NearbyRetry.SEEN_TTL_MS) {
+                it.remove();
+                candidates.remove(entry.getKey());
+                waitQueue.remove(entry.getKey());
+            }
+        }
+    }
+
+    private void bumpBackoff(String id) {
+        int count = failures.containsKey(id) ? failures.get(id) + 1 : 1;
+        failures.put(id, count);
+        long delay = NearbyRetry.backoffMs(count);
+        retryAt.put(id, SystemClock.elapsedRealtime() + delay);
+        Log.i(TAG, "retry in " + delay + "ms after " + count + " failures");
+    }
+
+    private void finishAttempt(String id, boolean success) {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            main.post(() -> finishAttempt(id, success));
+            return;
+        }
+        if (id == null || activeId == null || !activeId.equals(id)) return;
+        main.removeCallbacks(attemptTimeout);
+        if (success) {
+            failures.remove(id);
+            retryAt.remove(id);
+        } else if (!delivered.contains(id) && !ignored.contains(id)) {
+            bumpBackoff(id);
+        }
+        activeId = null;
+        pumpQueue();
     }
 
     @SuppressLint("MissingPermission")
     private void connectPeer(BluetoothDevice device, String id) {
-        if (!running) return;
+        if (!running || !id.equals(activeId)) return;
         try {
-            if (openGatt != null) {
-                openGatt.close();
-                openGatt = null;
-            }
             dropClientKeys();
             final BleCrypto.Ephemeral mine = BleCrypto.generate();
             clientKeys = mine;
@@ -466,8 +613,11 @@ public class NearbyPlugin extends Plugin {
                     Log.w(TAG, why);
                     mine.zeroize();
                     if (clientKeys == mine) clientKeys = null;
-                    inFlight.remove(id);
-                    gatt.disconnect();
+                    try {
+                        gatt.disconnect();
+                    } catch (Exception ignored) {
+                    }
+                    finishAttempt(id, false);
                 }
 
                 @Override
@@ -480,9 +630,12 @@ public class NearbyPlugin extends Plugin {
                     } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                         mine.zeroize();
                         if (clientKeys == mine) clientKeys = null;
-                        gatt.close();
-                        inFlight.remove(id);
+                        try {
+                            gatt.close();
+                        } catch (Exception ignored) {
+                        }
                         if (openGatt == gatt) openGatt = null;
+                        finishAttempt(id, delivered.contains(id));
                     }
                 }
 
@@ -570,8 +723,8 @@ public class NearbyPlugin extends Plugin {
             openGatt = device.connectGatt(getContext(), false, cb, BluetoothDevice.TRANSPORT_LE);
         } catch (Exception e) {
             Log.w(TAG, "connect", e);
-            inFlight.remove(id);
             dropClientKeys();
+            finishAttempt(id, false);
         }
     }
 
@@ -653,7 +806,7 @@ public class NearbyPlugin extends Plugin {
                     return;
                 }
             }
-            byte[] slice = BleCrypto.sliceForMtu(all, offset, s.mtu);
+            byte[] slice = BleCrypto.readResponse(all, offset);
             gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, slice);
         }
 
@@ -736,7 +889,8 @@ public class NearbyPlugin extends Plugin {
         boolean first = address == null || ignored.add(address);
         if (address != null) {
             candidates.remove(address);
-            inFlight.remove(address);
+            waitQueue.remove(address);
+            lastSeen.remove(address);
         }
         if (!first) return;
         Log.w(TAG, "ignoring older TableTrade" + (address == null ? "" : " at " + address) + "; not retrying");
@@ -778,6 +932,108 @@ public class NearbyPlugin extends Plugin {
         BleCrypto.Ephemeral mine = clientKeys;
         clientKeys = null;
         if (mine != null) mine.zeroize();
+    }
+
+    @PluginMethod
+    public void radioInfo(PluginCall call) {
+        JSObject info = new JSObject();
+        info.put("needsLocation", NearbyStartGate.needsSystemLocation(Build.VERSION.SDK_INT));
+        call.resolve(info);
+    }
+
+    @PluginMethod
+    public void recheck(PluginCall call) {
+        if (!running) {
+            call.resolve();
+            return;
+        }
+        boolean bluetoothOn = false;
+        try {
+            BluetoothManager mgr = manager();
+            bluetoothOn = mgr != null && mgr.getAdapter() != null && mgr.getAdapter().isEnabled();
+        } catch (SecurityException e) {
+            bluetoothOn = false;
+        }
+        boolean locationOn = true;
+        if (NearbyStartGate.needsSystemLocation(Build.VERSION.SDK_INT)) locationOn = systemLocationEnabled();
+        String block = NearbyStartGate.blockCode(Build.VERSION.SDK_INT, bluetoothOn, locationOn);
+        if (block != null) {
+            stopForRadio(block);
+            call.reject(NearbyStartGate.messageFor(block), block);
+            return;
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void openAppSettings(PluginCall call) {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        intent.setData(Uri.parse("package:" + getContext().getPackageName()));
+        Activity activity = getActivity();
+        try {
+            if (activity != null) activity.startActivity(intent);
+            else {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(intent);
+            }
+            call.resolve();
+        } catch (Exception e) {
+            Log.w(TAG, "app settings", e);
+            call.reject("Could not open app settings.", NearbyStartGate.PERMISSION_BLOCKED);
+        }
+    }
+
+    private void watchRadio() {
+        if (radioWatching) return;
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+        filter.addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED);
+        filter.addAction(LocationManager.PROVIDERS_CHANGED_ACTION);
+        filter.addAction(LocationManager.MODE_CHANGED_ACTION);
+        try {
+            if (Build.VERSION.SDK_INT >= 33) {
+                getContext().registerReceiver(radioWatch, filter, android.content.Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                getContext().registerReceiver(radioWatch, filter);
+            }
+            radioWatching = true;
+        } catch (Exception e) {
+            Log.w(TAG, "radio watch", e);
+        }
+    }
+
+    private void unwatchRadio() {
+        if (!radioWatching) return;
+        try {
+            getContext().unregisterReceiver(radioWatch);
+        } catch (Exception ignored) {
+        }
+        radioWatching = false;
+    }
+
+    private void stopForRadio(String code) {
+        if (!running) return;
+        Log.w(TAG, "stopping look: " + code);
+        JSObject ev = new JSObject();
+        ev.put("code", code);
+        notifyListeners("status", ev);
+        halt();
+    }
+
+    private void rejectPermission(PluginCall call) {
+        String permission = Build.VERSION.SDK_INT >= 31
+                ? Manifest.permission.BLUETOOTH_SCAN
+                : Manifest.permission.ACCESS_FINE_LOCATION;
+        boolean blocked = false;
+        Activity activity = getActivity();
+        if (activity != null) {
+            blocked = !ActivityCompat.shouldShowRequestPermissionRationale(activity, permission);
+        }
+        String code = blocked ? NearbyStartGate.PERMISSION_BLOCKED : NearbyStartGate.PERMISSION_DENIED;
+        String message = Build.VERSION.SDK_INT >= 31
+                ? NearbyStartGate.PERMISSION_NEARBY
+                : NearbyStartGate.PERMISSION_LOCATION;
+        call.reject(message, code);
     }
 
     private void failStart(String msg) {
@@ -829,8 +1085,14 @@ public class NearbyPlugin extends Plugin {
         delivered.clear();
         ignored.clear();
         legacyHintSent = false;
-        inFlight.clear();
         candidates.clear();
+        lastSeen.clear();
+        failures.clear();
+        retryAt.clear();
+        waitQueue.clear();
+        activeId = null;
+        pumpScheduled = false;
+        unwatchRadio();
     }
 
     @Override

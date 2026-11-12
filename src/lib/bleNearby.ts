@@ -8,6 +8,9 @@ type NearbyNative = {
   stop(): Promise<void>;
   openLocationSettings(): Promise<void>;
   requestEnableBluetooth(): Promise<void>;
+  openAppSettings(): Promise<void>;
+  recheck(): Promise<void>;
+  radioInfo(): Promise<{ needsLocation?: boolean }>;
   addListener(
     eventName: "peer" | "status",
     listener: (ev: { payload?: string; code?: string }) => void,
@@ -51,12 +54,14 @@ export function payloadTooLarge(err: unknown): boolean {
   return `${code}\n${message}`.includes("PAYLOAD_TOO_LARGE");
 }
 
-export type NearbyBlock = "location" | "bluetooth";
+export type NearbyBlock = "location" | "bluetooth" | "permission" | "settings";
 
 export function nearbyBlockFromError(err: unknown): NearbyBlock | null {
   const code = readField(err, "code");
   const message = err instanceof Error ? err.message : readField(err, "message");
   const hay = `${code}\n${message}`;
+  if (hay.includes("PERMISSION_BLOCKED")) return "settings";
+  if (hay.includes("PERMISSION_DENIED")) return "permission";
   if (hay.includes("LOCATION_OFF")) return "location";
   if (hay.includes("BLUETOOTH_OFF")) return "bluetooth";
   return null;
@@ -79,6 +84,18 @@ export function openPhoneLocationSettings(): Promise<void> {
 
 export function requestPhoneBluetooth(): Promise<void> {
   return native.requestEnableBluetooth();
+}
+
+export function openPhoneAppSettings(): Promise<void> {
+  return native.openAppSettings();
+}
+
+export function recheckPhoneRadio(): Promise<void> {
+  return native.recheck();
+}
+
+export function phoneRadioInfo(): Promise<{ needsLocation?: boolean }> {
+  return native.radioInfo();
 }
 
 function cardIds(cards: Card[], n: number): string[] {
@@ -150,13 +167,14 @@ export function decodeNearbyPayload(raw: string): Presence | null {
       want?: unknown;
       ts?: number;
     };
-    if (!parsed?.userId || !parsed.ts) return null;
+    if (!parsed?.userId || parsed.userId.length > 64 || !parsed.ts) return null;
+    const note = typeof parsed.note === "string" ? parsed.note.slice(0, 40) : undefined;
     return {
-      userId: parsed.userId,
-      name: parsed.name || "Trainer",
-      note: parsed.note,
-      have: inflate(parsed.have),
-      want: inflate(parsed.want),
+      userId: parsed.userId.slice(0, 64),
+      name: (parsed.name || "Trainer").slice(0, 24),
+      note,
+      have: inflate(parsed.have).slice(0, 12),
+      want: inflate(parsed.want).slice(0, 12),
       ts: parsed.ts,
     };
   } catch {

@@ -17,7 +17,13 @@ import {
   INSTALL_NO_ACCOUNT,
   locationHintCopy,
   LOCATION_OFF_HINT,
+  LOCATION_ASK,
   OPEN_LOCATION_SETTINGS,
+  PERMISSION_LOCATION,
+  PERMISSION_NEARBY,
+  OPEN_APP_SETTINGS,
+  HERE_NOTE_HINT,
+  HERE_NOTE_PLACEHOLDER,
   BLUETOOTH_OFF_HINT,
   TURN_ON_BLUETOOTH,
   LISTS_TOO_BIG,
@@ -81,6 +87,12 @@ describe("join and first-run copy", () => {
       "Turn on Location to find traders. Android 11 and older need Location on for Bluetooth to see nearby phones. TableTrade does not use your GPS position.",
     );
     expect(OPEN_LOCATION_SETTINGS).toBe("Open Location settings");
+    expect(LOCATION_ASK).toMatch(/never reads your position/);
+    expect(PERMISSION_LOCATION).toMatch(/Allow Location/);
+    expect(PERMISSION_NEARBY).toMatch(/Nearby devices/);
+    expect(OPEN_APP_SETTINGS).toBe("Open app settings");
+    expect(HERE_NOTE_HINT).not.toMatch(/Red hoodie/);
+    expect(HERE_NOTE_PLACEHOLDER).toMatch(/Red hoodie/);
     expect(BLUETOOTH_OFF_HINT).toMatch(/Turn Bluetooth on/);
     expect(TURN_ON_BLUETOOTH).toBe("Turn on Bluetooth");
     expect(LISTS_TOO_BIG).toMatch(/too big to send/);
@@ -91,7 +103,8 @@ describe("join and first-run copy", () => {
     expect(app).toContain("showInstall={!Capacitor.isNativePlatform()}");
     expect(HAVE_FIRST_RUN_PRIVACY).toMatch(/encrypted Bluetooth/);
     expect(PRIVACY_LISTS).toMatch(/encrypted Bluetooth/);
-    expect(PRIVACY_LISTS).toMatch(/Anyone looking nearby can read them/);
+    expect(PRIVACY_LISTS).toMatch(/Anyone using TableTrade nearby can read them/);
+    expect(PRIVACY_LISTS).not.toMatch(/Anyone looking nearby/);
     expect(app).toContain("OPEN_LOCATION_SETTINGS");
     expect(app).toContain("TURN_ON_BLUETOOTH");
     expect(app).toContain("openPhoneLocationSettings");

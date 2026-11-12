@@ -8,27 +8,29 @@ package com.rangeroadtech.tabletrade;
 public final class BleAdvertisement {
     private BleAdvertisement() {}
 
-    public static byte[] manufacturerData(byte[] rotatingToken) {
+    /** Service data: 'T','2' and a 4-byte rotating token. Not a Bluetooth company id. */
+    public static byte[] serviceData(byte[] rotatingToken) {
         if (rotatingToken == null || rotatingToken.length != 4) {
             throw new IllegalArgumentException("rotating token");
         }
-        byte[] mfg = new byte[6];
-        mfg[0] = 'T';
-        mfg[1] = '2';
-        System.arraycopy(rotatingToken, 0, mfg, 2, 4);
-        return mfg;
+        byte[] data = new byte[6];
+        data[0] = 'T';
+        data[1] = '2';
+        System.arraycopy(rotatingToken, 0, data, 2, 4);
+        return data;
     }
 
-    /** @return the 4-byte token, or null when this is not a v2 TableTrade ad */
-    public static byte[] tokenFrom(byte[] mfg) {
-        if (mfg == null || mfg.length < 6 || mfg[0] != 'T' || mfg[1] != '2') return null;
+    /** @return the 4-byte token, or null when this is not a v2 TableTrade service payload */
+    public static byte[] tokenFromServiceData(byte[] data) {
+        if (data == null || data.length < 6 || data[0] != 'T' || data[1] != '2') return null;
         byte[] token = new byte[4];
-        System.arraycopy(mfg, 2, token, 0, 4);
+        System.arraycopy(data, 2, token, 0, 4);
         return token;
     }
 
-    /** Version 1 ads start with 'TT'. They are not a peer we can read. */
-    public static boolean isLegacy(byte[] mfg) {
-        return mfg != null && mfg.length >= 2 && mfg[0] == 'T' && mfg[1] == 'T';
+    /** Version 1 ads used manufacturer data starting with 'TT'. */
+    public static boolean isLegacy(byte[] manufacturerData) {
+        return manufacturerData != null && manufacturerData.length >= 2
+                && manufacturerData[0] == 'T' && manufacturerData[1] == 'T';
     }
 }

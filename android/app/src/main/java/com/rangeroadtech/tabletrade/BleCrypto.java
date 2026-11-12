@@ -221,13 +221,14 @@ public final class BleCrypto {
         return plain;
     }
 
-    /** One ATT read/write response chunk. mtu is the negotiated ATT MTU. */
-    public static byte[] sliceForMtu(byte[] all, int offset, int mtu) {
+    /**
+     * Bytes still to send for a GATT read. The Android stack trims this to MTU−1.
+     * The client asks for the next blob only when that trimmed piece is exactly MTU−1 long,
+     * so the app must not pre-slice to MTU−3.
+     */
+    public static byte[] readResponse(byte[] all, int offset) {
         if (all == null || offset < 0 || offset >= all.length) return new byte[0];
-        int att = mtu - ATT_HEADER;
-        if (att < 1) att = 20;
-        int n = Math.min(att, all.length - offset);
-        return Arrays.copyOfRange(all, offset, offset + n);
+        return Arrays.copyOfRange(all, offset, all.length);
     }
 
     /** Version 1 JSON and any other pre-v2 frame. Callers log these and do not retry. */
@@ -292,21 +293,48 @@ public final class BleCrypto {
             }
         } catch (Rejected e) {
             throw e;
+        } catch (RuntimeException e) {
+            throw new Rejected("bad public key");
         } catch (GeneralSecurityException e) {
             throw new Rejected("key agreement failed");
         }
     }
 
+    private static final BigInteger P256_P = new BigInteger(
+            "FFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF", 16);
+    private static final BigInteger P256_B = new BigInteger(
+            "5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B", 16);
+
     private static PublicKey decodePublic(byte[] uncompressed, ECParameterSpec params) throws Rejected {
-        requirePoint(uncompressed);
-        byte[] x = Arrays.copyOfRange(uncompressed, 1, 33);
-        byte[] y = Arrays.copyOfRange(uncompressed, 33, 65);
-        ECPoint w = new ECPoint(new BigInteger(1, x), new BigInteger(1, y));
         try {
+            requireOnCurve(uncompressed);
+            byte[] x = Arrays.copyOfRange(uncompressed, 1, 33);
+            byte[] y = Arrays.copyOfRange(uncompressed, 33, 65);
+            ECPoint w = new ECPoint(new BigInteger(1, x), new BigInteger(1, y));
             return KeyFactory.getInstance("EC").generatePublic(new ECPublicKeySpec(w, params));
+        } catch (Rejected e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new Rejected("bad public key");
         } catch (GeneralSecurityException e) {
             throw new Rejected("bad public key");
         }
+    }
+
+    /** 65-byte uncompressed point, coordinates in range, and on the P-256 curve. */
+    static void requireOnCurve(byte[] uncompressed) throws Rejected {
+        requirePoint(uncompressed);
+        BigInteger x = new BigInteger(1, Arrays.copyOfRange(uncompressed, 1, 33));
+        BigInteger y = new BigInteger(1, Arrays.copyOfRange(uncompressed, 33, 65));
+        if (x.signum() < 0 || y.signum() < 0 || x.compareTo(P256_P) >= 0 || y.compareTo(P256_P) >= 0) {
+            throw new Rejected("bad public key");
+        }
+        BigInteger y2 = y.modPow(BigInteger.valueOf(2), P256_P);
+        BigInteger rhs = x.modPow(BigInteger.valueOf(3), P256_P)
+                .subtract(x.multiply(BigInteger.valueOf(3)))
+                .add(P256_B)
+                .mod(P256_P);
+        if (!y2.equals(rhs)) throw new Rejected("bad public key");
     }
 
     private static ECParameterSpec paramsOf(Ephemeral self) {

@@ -95,5 +95,24 @@ describe("nearby radio errors", () => {
     expect(nearbyBlockFromError({ code: "BLUETOOTH_OFF" })).toBe("bluetooth");
     expect(nearbyBlockFromError(new Error("LOCATION_OFF"))).toBe("location");
     expect(nearbyBlockFromError(new Error("Allow Bluetooth, then tap I’m looking."))).toBeNull();
+    expect(nearbyBlockFromError({ code: "PERMISSION_BLOCKED" })).toBe("settings");
+    expect(nearbyBlockFromError({ code: "PERMISSION_DENIED" })).toBe("permission");
+  });
+
+  it("caps a peer profile instead of keeping a huge name or list", () => {
+    const raw = JSON.stringify({
+      userId: "u".repeat(80),
+      name: "N".repeat(80),
+      note: "O".repeat(80),
+      have: Array.from({ length: 20 }, (_, i) => `h${i}`),
+      want: Array.from({ length: 20 }, (_, i) => `w${i}`),
+      ts: 5,
+    });
+    expect(decodeNearbyPayload(raw)).toBeNull();
+    const trimmed = decodeNearbyPayload(raw.replace("u".repeat(80), "user-1"));
+    expect(trimmed?.name).toBe("N".repeat(24));
+    expect(trimmed?.note).toBe("O".repeat(40));
+    expect(trimmed?.have).toHaveLength(12);
+    expect(trimmed?.want).toHaveLength(12);
   });
 });

@@ -23,7 +23,7 @@ A package that is not version 2, or that is still JSON in the clear, is rejected
 
 ## Advertisements
 
-The advertisement is six bytes: the letters `T` and `2`, then four random bytes. Those four bytes change when you start looking, and again every two minutes. They are not your user id, your name, or your cards. Scan responses are not given a name or a profile. Version 1 ads, which carried a hash of the user id, are ignored.
+The advertisement carries our own service UUID and six bytes of service data: the letters `T` and `2`, then four random bytes. Those four bytes change when you start looking, and again every two minutes. They are not your user id, your name, or your cards. The ad does not use a Bluetooth company id. Scan responses are not given a name or a profile. Version 1 ads, which used the testing company id and a hash of the user id, are ignored.
 
 The advertisement still shows that a TableTrade phone is nearby. That is metadata, and this encryption does not hide it.
 
@@ -41,7 +41,7 @@ The encrypted package is:
 | AES-GCM tag | 16 |
 | Overhead | 94 |
 
-One MTU 517 packet holds 514 bytes. A full profile does not have to fit in that one packet. The same split used for a small MTU carries any larger frame: reads come back in chunks of MTU − 3, and long writes are put back together before they are decrypted.
+One MTU 517 packet holds 514 bytes of a write (517 minus the 3-byte ATT write header). A read is different: Android asks for the next piece only when the last read response was exactly MTU − 1 bytes. The phone that is waiting therefore returns every remaining byte and lets the Bluetooth stack trim each response to MTU − 1. A shorter slice would end the read early and the other phone would never see the profile. Long writes are prepared writes of at most MTU − 3 bytes, put back together before they are decrypted.
 
 The hard ceiling is **2 KB** (2048 bytes) for the whole frame. That leaves 1954 bytes for the profile. A UUID, a 24-character name, a 40-character note, and 12 have ids plus 12 want ids fit in that, including long card ids, and every one of those ids is sent. TableTrade does not drop cards to make the frame smaller. If a profile is somehow bigger than 2 KB, looking does not start a shortened copy. The phone says the lists are too big to send.
 

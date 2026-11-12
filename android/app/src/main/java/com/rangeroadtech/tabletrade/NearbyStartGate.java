@@ -14,6 +14,12 @@ public final class NearbyStartGate {
             "Turn on Location to find traders. Android 11 and older need Location on for Bluetooth to see nearby phones. TableTrade does not use your GPS position.";
     public static final String BLUETOOTH_OFF_MESSAGE =
             "Turn Bluetooth on to find traders. Looking talks to phones close by over Bluetooth.";
+    public static final String PERMISSION_LOCATION =
+            "Allow Location so Bluetooth can find nearby phones. TableTrade does not use your GPS position.";
+    public static final String PERMISSION_NEARBY =
+            "Allow Nearby devices, then tap I’m looking.";
+    public static final String PERMISSION_DENIED = "PERMISSION_DENIED";
+    public static final String PERMISSION_BLOCKED = "PERMISSION_BLOCKED";
 
     private NearbyStartGate() {}
 
