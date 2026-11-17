@@ -1,16 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import nearbyMarkSource from "../resources/icon-g.svg?raw";
-
-/** Zoom the Nearby disc only. Outer ring ≈ 84% of the 104px circle; launcher art stays full-frame. */
-const nearbyMark = nearbyMarkSource.replace(
-  'viewBox="0 0 108 108"',
-  'viewBox="14.833 14.833 78.333 78.333"',
-);
 import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import type { Card, MatchSource, Presence, Settings, Tab, TradeMatch } from "./types";
 import { AddCardSheet } from "./AddCardSheet";
-import { ProfilePhotoSheet } from "./ProfilePhotoSheet";
 import {
   loadHave,
   loadSeenMatchIds,
@@ -46,8 +39,6 @@ import {
   NEARBY_LEDE,
   PING_HERE,
   PRIVACY_FAN,
-  PRIVACY_LISTS,
-  PRIVACY_PING,
   SITE_APP_PAGE,
   SITE_HOME,
   SITE_PRIVACY,
@@ -55,8 +46,7 @@ import {
   COMPANY,
   WANT_LEDE,
   YOU_LEDE,
-  YOU_PHOTO_HINT,
-  YOU_WHAT,
+  YOU_SHARED,
   AGE_TITLE,
   AGE_BODY,
   AGE_YES,
@@ -75,7 +65,7 @@ import {
 } from "./lib/copy";
 import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
 import { kindLabel, matchAgainst, sourceLabel } from "./lib/match";
-import { compressProfilePhoto, initialsFromName } from "./lib/photo";
+import { initialsFromName } from "./lib/photo";
 import { connectLocalHub } from "./lib/presence";
 import {
   canUsePhoneNearby,
@@ -92,6 +82,12 @@ import {
   type NearbyBlock,
 } from "./lib/bleNearby";
 import { permissionDenied, resumePermission, showLocationAsk } from "./lib/nearbyPermission";
+
+/** Zoom the Nearby disc only. Outer ring ≈ 84% of the 104px circle; launcher art stays full-frame. */
+const nearbyMark = nearbyMarkSource.replace(
+  'viewBox="0 0 108 108"',
+  'viewBox="14.833 14.833 78.333 78.333"',
+);
 
 const TABS: { id: Tab; ico: string; lbl: string }[] = [
   { id: "have", ico: "▣", lbl: "Have" },
@@ -117,7 +113,6 @@ export default function App() {
   const [brokerStatus] = useState<"idle" | "live" | "error">("idle");
   const [matches, setMatches] = useState<TradeMatch[]>([]);
   const [activePing, setActivePing] = useState<TradeMatch | null>(null);
-  const [showPhoto, setShowPhoto] = useState(false);
   const [seedNote, setSeedNote] = useState("");
 
   const [ageBlocked, setAgeBlocked] = useState(false);
@@ -415,7 +410,7 @@ export default function App() {
     }
     remember({ ...settingsRef.current, demoMode: true });
     const demo = complementaryDemoPresence(haveRef.current, wantRef.current, {
-      note: settingsRef.current.lookingNote?.trim() || "Red hoodie. Back table.",
+      note: settingsRef.current.lookingNote?.trim() || "Red hoodie, table 4",
     });
     ingestPeer(demo, "demo", true);
     setTab("nearby");
@@ -533,8 +528,6 @@ export default function App() {
             showInstall={!Capacitor.isNativePlatform()}
             onName={(displayName) => remember({ ...settings, displayName })}
             onLookingNote={(lookingNote) => remember({ ...settings, lookingNote })}
-            onOpenPhoto={() => setShowPhoto(true)}
-            onClearPhoto={() => remember({ ...settings, photo: undefined })}
             onDemoMode={(demoMode) => remember({ ...settings, demoMode })}
             onDemo={fireDemo}
           />
@@ -562,20 +555,6 @@ export default function App() {
       {activePing && (
         <PingSheet match={activePing} onClose={() => setActivePing(null)} onBlock={blockPeer} />
       )}
-      {showPhoto ? (
-        <ProfilePhotoSheet
-          onClose={() => setShowPhoto(false)}
-          onPhoto={async (file) => {
-            try {
-              const photo = await compressProfilePhoto(file);
-              remember({ ...settingsRef.current, photo });
-              setShowPhoto(false);
-            } catch {
-              /* keep the last photo */
-            }
-          }}
-        />
-      ) : null}
     </div>
   );
 }
@@ -742,7 +721,6 @@ function NearbyPane({
         </button>
       ) : null}
       {seedNote ? <p className="hint">{seedNote}</p> : null}
-      <p className="hint">{MATCH_PRINTING}</p>
 
       <h3 className="panel-title" style={{ marginTop: 18 }}>
         Pings
@@ -755,7 +733,7 @@ function NearbyPane({
             <button key={m.id + m.at} className="match-card" onClick={() => onOpenPing(m)}>
               <header>
                 <span className="match-who">
-                  <Face name={m.peer.name} photo={m.peer.photo} />
+                  <Face name={m.peer.name} />
                   <strong>{m.peer.name}</strong>
                 </span>
                 <span className="badge">{sourceLabel(m.source)}</span>
@@ -781,8 +759,6 @@ function YouPane({
   showInstall,
   onName,
   onLookingNote,
-  onOpenPhoto,
-  onClearPhoto,
   onDemoMode,
   onDemo,
 }: {
@@ -791,8 +767,6 @@ function YouPane({
   showInstall: boolean;
   onName: (name: string) => void;
   onLookingNote: (note: string) => void;
-  onOpenPhoto: () => void;
-  onClearPhoto: () => void;
   onDemoMode: (on: boolean) => void;
   onDemo: () => void;
 }) {
@@ -823,20 +797,7 @@ function YouPane({
           onChange={(e) => onLookingNote(e.target.value.slice(0, HERE_NOTE_MAX))}
         />
         <p className="hint">{HERE_NOTE_HINT}</p>
-        <div className="photo-row">
-          <Face name={settings.displayName} photo={settings.photo} large />
-          <div className="stack" style={{ flex: 1 }}>
-            <button className="btn secondary full" onClick={onOpenPhoto}>
-              {settings.photo ? "Change photo" : "Add a photo"}
-            </button>
-            {settings.photo ? (
-              <button className="btn secondary" onClick={onClearPhoto}>
-                Remove
-              </button>
-            ) : null}
-            <p className="hint">{YOU_PHOTO_HINT}</p>
-          </div>
-        </div>
+        <p className="hint">{YOU_SHARED}</p>
         {import.meta.env.DEV ? (
           <>
             <div className="toggle-row">
@@ -854,30 +815,6 @@ function YouPane({
           </>
         ) : null}
       </div>
-      <h3 className="panel-title">What this is</h3>
-      <p className="lede">{YOU_WHAT}</p>
-      <ul className="privacy-lines">
-        <li>{PRIVACY_LISTS}</li>
-        <li>{PRIVACY_PING}</li>
-        <li>{PRIVACY_FAN}</li>
-      </ul>
-      <p className="hint">
-        A product of {COMPANY}.
-      </p>
-      <ul className="privacy-lines">
-        <li>
-          <a href={SITE_APP_PAGE}>About TableTrade</a>
-        </li>
-        <li>
-          <a href={SITE_HOME}>{COMPANY}</a>
-        </li>
-        <li>
-          <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>
-        </li>
-        <li>
-          <a href={SITE_PRIVACY}>Privacy</a>
-        </li>
-      </ul>
       {showInstall ? (
         <>
           <h3 className="panel-title">{INSTALL_HEADING}</h3>
@@ -896,6 +833,25 @@ function YouPane({
           )}
         </>
       ) : null}
+      <details className="about">
+        <summary>About</summary>
+        <p className="hint">{MATCH_PRINTING}</p>
+        <p className="hint">A product of {COMPANY}.</p>
+        <ul className="privacy-lines">
+          <li>
+            <a href={SITE_APP_PAGE}>About TableTrade</a>
+          </li>
+          <li>
+            <a href={SITE_HOME}>{COMPANY}</a>
+          </li>
+          <li>
+            <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>
+          </li>
+          <li>
+            <a href={SITE_PRIVACY}>Privacy</a>
+          </li>
+        </ul>
+      </details>
     </section>
   );
 }
@@ -908,7 +864,7 @@ function PingSheet({ match, onClose, onBlock }: { match: TradeMatch; onClose: ()
     <div className="ping-sheet" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="grab" />
-        <Face name={match.peer.name} photo={match.peer.photo} large />
+        <Face name={match.peer.name} large />
         <div className="ping-kicker">{match.source === "demo" ? "Demo ping" : "Match"}</div>
         <h2 className="ping-title">
           {match.peer.name} {PING_HERE}
@@ -949,9 +905,8 @@ function PingSheet({ match, onClose, onBlock }: { match: TradeMatch; onClose: ()
   );
 }
 
-function Face({ name, photo, large }: { name: string; photo?: string; large?: boolean }) {
+function Face({ name, large }: { name: string; large?: boolean }) {
   const cls = large ? "avatar lg" : "avatar";
-  if (photo) return <img className={cls} src={photo} alt={name} />;
   return (
     <span className={`${cls} fallback`} aria-hidden>
       {initialsFromName(name)}
@@ -965,6 +920,7 @@ function HaveFirstRun({ showInstall }: { showInstall: boolean }) {
       <h3>{HAVE_FIRST_RUN_TITLE}</h3>
       <p>{HAVE_FIRST_RUN_BODY}</p>
       <p className="hint">{HAVE_FIRST_RUN_PRIVACY}</p>
+      <p className="hint">{PRIVACY_FAN}</p>
       {showInstall ? (
         <p className="install-quiet">
           <strong>{INSTALL_HEADING}.</strong> {INSTALL_NO_ACCOUNT} {INSTALL_IPHONE} {INSTALL_ANDROID}

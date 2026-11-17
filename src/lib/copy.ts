@@ -12,15 +12,15 @@ export const NEARBY_LEDE =
 
 export const YOU_LEDE = "Your lists stay on your phone. No account needed.";
 
-export const YOU_WHAT = "Trade Pokémon cards with people near you. When you match, go talk.";
+export const YOU_WHAT = "Trade Pokémon cards with people near you. When you match, meet up and trade.";
 
-export const YOU_PHOTO_HINT =
-  "Optional. Your photo stays on this phone. Other people will not receive it when you check in.";
+export const YOU_SHARED =
+  "When you check in, nearby traders get your name, how to find you, and your card lists. Nothing else.";
 
 export const HAVE_FIRST_RUN_TITLE = "Get started.";
 
 export const HAVE_FIRST_RUN_BODY =
-  "Add a few cards you want to trade away and cards you want. At a shop or event, go to Nearby and press Check in. If your lists match someone nearby, both phones ping. Then you talk.";
+  "Add a few cards you want to trade away and cards you want. At a shop or event, go to Nearby and press Check in. If your lists match someone nearby, both phones ping. Then meet up and trade.";
 
 export const HAVE_FIRST_RUN_PRIVACY = "Your list is shared with nearby phones only when you check in.";
 
@@ -33,7 +33,7 @@ export const INSTALL_IPHONE = "iPhone: Safari → Share → Add to Home Screen."
 export const INSTALL_ANDROID = "Android: Chrome menu → Add to Home screen or Install app.";
 
 export const PRIVACY_LISTS =
-  "Your lists stay on your phone until you check in. Then your name, your lists and your note go to other TableTrade phones nearby. Your photo is not sent. A phone that is only listening cannot read that.";
+  "Your lists stay on your phone until you check in. Then your name, your lists and your note go to other TableTrade phones nearby. A phone that is only listening cannot read that.";
 
 export const PRIVACY_PING = "You’ll get a ping when someone nearby is a match.";
 
@@ -47,7 +47,7 @@ export const LEAVE_LOOKING = "Done";
 
 export const HERE_NOTE_LABEL = "How to find you";
 
-export const HERE_NOTE_PLACEHOLDER = "Red hoodie. Back table.";
+export const HERE_NOTE_PLACEHOLDER = "Red hoodie, table 4";
 
 export const HERE_NOTE_HINT = "Optional. So they can spot you in the room.";
 

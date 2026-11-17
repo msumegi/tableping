@@ -39,18 +39,21 @@ export function newUserId(): string {
 }
 
 export function loadSettings(): Settings {
-  const stored = readJson<Partial<Settings> | null>(SETTINGS, null);
-  return {
+  const stored = readJson<(Partial<Settings> & { photo?: unknown }) | null>(SETTINGS, null);
+  const settings: Settings = {
     displayName: stored?.displayName?.trim() || "Trainer",
     userId: stored?.userId || newUserId(),
     demoMode: Boolean(stored?.demoMode),
     tableCode: stored?.tableCode || "",
-    photo: stored?.photo,
     lastShopId: stored?.lastShopId,
     lookingNote: typeof stored?.lookingNote === "string" ? stored.lookingNote.slice(0, 40) : "",
     ageOk: Boolean(stored?.ageOk),
     blockedIds: Array.isArray(stored?.blockedIds) ? stored.blockedIds.filter((id) => typeof id === "string") : [],
   };
+  if (stored && Object.prototype.hasOwnProperty.call(stored, "photo")) {
+    saveSettings(settings);
+  }
+  return settings;
 }
 
 export function saveSettings(settings: Settings): void {

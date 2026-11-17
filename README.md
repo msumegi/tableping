@@ -8,7 +8,7 @@ If you and someone else close by are both using TableTrade, you get a ping when:
 - they have a card you want, or
 - both.
 
-Two people **press Check in**. Matches nearby ping, with a name and an optional how-to-find-you line so you can spot them in the room. The photo stays on the phone. There is no shop list, no table code, no QR join, and no meetup scheduler.
+Two people **press Check in**. Matches nearby ping, with a name and an optional how-to-find-you line so you can spot them in the room. There is no shop list, no table code, no QR join, and no meetup scheduler.
 
 Pokémon only. No Magic. No One Piece.
 
@@ -72,11 +72,11 @@ Do this when you are actually near each other. This is not a city-wide radar.
 
 **Check in (the v1 path):**
 
-1. Both people add have/want cards and a display name (a photo helps)
+1. Both people add have/want cards and a display name
 2. Both open **Nearby** and press **Check in**
 3. Optional: type **How to find you** (red hoodie, back table)
 4. If the lists overlap and the phones are close, both phones fire
-5. Find them by name, photo, and that line. Then you talk.
+5. Find them by name and that line. Then meet up and trade.
 
 If you are testing alone, you do not need a second phone: use **See a demo ping now**.
 

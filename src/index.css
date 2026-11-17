@@ -307,6 +307,24 @@ img {
   color: var(--lamp, #f6cf96);
 }
 
+.about {
+  margin-top: 8px;
+}
+
+.about summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 650;
+  color: var(--paper);
+}
+
+.about .hint,
+.about .privacy-lines {
+  margin-bottom: 10px;
+}
+
 .fab-row {
   margin-top: 16px;
   display: flex;

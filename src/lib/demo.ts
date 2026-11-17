@@ -28,7 +28,7 @@ export function complementaryDemoPresence(
     name: DEMO_NAME,
     have: demoHave,
     want: demoWant,
-    note: extras?.note ?? "Red hoodie. Back table.",
+    note: extras?.note ?? "Red hoodie, table 4",
     geohash: extras?.geohash,
     lat: extras?.lat,
     lon: extras?.lon,

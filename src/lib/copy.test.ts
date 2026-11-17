@@ -61,7 +61,7 @@ describe("join and first-run copy", () => {
     expect(HAVE_FIRST_RUN_TITLE).toBe("Get started.");
     expect(HAVE_FIRST_RUN_BODY).toMatch(/press Check in/);
     expect(HAVE_FIRST_RUN_BODY).toMatch(/both phones ping/);
-    expect(HAVE_FIRST_RUN_BODY).toMatch(/Then you talk/);
+    expect(HAVE_FIRST_RUN_BODY).toMatch(/Then meet up and trade/);
     expect(HAVE_FIRST_RUN_PRIVACY).toBe("Your list is shared with nearby phones only when you check in.");
     expect(HAVE_FIRST_RUN_PRIVACY).not.toMatch(/encrypted|private|password/i);
     expect(text.split(/\s+/).length).toBeLessThan(80);
@@ -89,7 +89,7 @@ describe("join and first-run copy", () => {
     expect(PERMISSION_NEARBY).toMatch(/Nearby devices/);
     expect(OPEN_APP_SETTINGS).toBe("Open app settings");
     expect(HERE_NOTE_HINT).not.toMatch(/Red hoodie/);
-    expect(HERE_NOTE_PLACEHOLDER).toMatch(/Red hoodie/);
+    expect(HERE_NOTE_PLACEHOLDER).toBe("Red hoodie, table 4");
     expect(BLUETOOTH_OFF_HINT).toMatch(/Turn Bluetooth on/);
     expect(TURN_ON_BLUETOOTH).toBe("Turn on Bluetooth");
     expect(LISTS_TOO_BIG).toMatch(/too big to send/);
@@ -100,7 +100,7 @@ describe("join and first-run copy", () => {
     expect(app).toContain("showInstall={!Capacitor.isNativePlatform()}");
     expect(HAVE_FIRST_RUN_PRIVACY).not.toMatch(/encrypted/);
     expect(PRIVACY_LISTS).not.toMatch(/encrypted|secure|private/i);
-    expect(PRIVACY_LISTS).toMatch(/Your photo is not sent/);
+    expect(PRIVACY_LISTS).not.toMatch(/photo/i);
     expect(PRIVACY_LISTS).toMatch(/only listening cannot read/);
     expect(app).toContain("OPEN_LOCATION_SETTINGS");
     expect(app).toContain("TURN_ON_BLUETOOTH");
@@ -126,7 +126,7 @@ describe("join and first-run copy", () => {
     expect(HAVE_LEDE).toBe("Cards you want to trade away.");
     expect(WANT_LEDE).toBe("Cards you want.");
     expect(YOU_LEDE).toBe("Your lists stay on your phone. No account needed.");
-    expect(YOU_WHAT).toBe("Trade Pokémon cards with people near you. When you match, go talk.");
+    expect(YOU_WHAT).toBe("Trade Pokémon cards with people near you. When you match, meet up and trade.");
     expect(PRIVACY_LISTS).toMatch(/until you check in/);
     expect(PRIVACY_PING).toMatch(/ping/i);
     expect(PRIVACY_FAN).toBe("TableTrade is an unofficial fan tool.");
