@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import nearbyMark from "../resources/icon-g.svg?raw";
 import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import type { Card, MatchSource, Presence, Settings, Tab, TradeMatch } from "./types";
@@ -668,9 +669,7 @@ function NearbyPane({
     <section>
       {radioBlock ? null : (
         <div className="nearby-hero">
-          <div className="radar" aria-hidden>
-            <span className="dot" />
-          </div>
+          <div className="nearby-mark" aria-hidden dangerouslySetInnerHTML={{ __html: nearbyMark }} />
           <p className="lede" style={{ color: "rgba(243,234,216,0.78)" }}>
             {NEARBY_LEDE}
           </p>
