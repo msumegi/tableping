@@ -1,54 +1,51 @@
 export function checkInHint(on: boolean): string {
-  if (!on) return "Your phone stays quiet. The app is off.";
-  return "You’re looking. Keep the app open. Matches close by will ping.";
+  if (!on) return "";
+  return "Keep the app open. You’ll get a ping if someone nearby is a match.";
 }
 
-export function locationHintCopy(): string {
-  return "Bluetooth finds who is close in the room. Keep Bluetooth on.";
-}
+export const HAVE_LEDE = "Cards you want to trade away.";
 
-export const HAVE_LEDE = "Cards you’d trade here, now.";
-
-export const WANT_LEDE = "What you’re hunting.";
+export const WANT_LEDE = "Cards you want.";
 
 export const NEARBY_LEDE =
-  "Tap I’m looking. A match close by buzzes you. Name, cards, optional I’m over here.";
+  "Press Check in when you’re at a shop or event. You’ll get a ping if your lists match someone nearby.";
 
-export const YOU_LEDE = "Lists live on the phone until you look. No password.";
+export const YOU_LEDE = "Your lists stay on your phone. No account needed.";
 
-export const YOU_WHAT = "Pokémon trades close by. Match, then talk.";
+export const YOU_WHAT = "Trade Pokémon cards with people near you. When you match, go talk.";
 
-export const YOU_PHOTO_HINT = "A face they can call out in the room. Optional. Not sent while looking.";
+export const YOU_PHOTO_HINT =
+  "Optional. Your photo stays on this phone. Other people will not receive it when you check in.";
 
-export const HAVE_FIRST_RUN_TITLE = "Here. Close by.";
+export const HAVE_FIRST_RUN_TITLE = "Get started.";
 
 export const HAVE_FIRST_RUN_BODY =
-  "Add a few haves and wants. Tap I’m looking when you get here. If the lists overlap and you are close, both phones fire. Then you talk.";
+  "Add a few cards you want to trade away and cards you want. At a shop or event, go to Nearby and press Check in. If your lists match someone nearby, both phones ping. Then you talk.";
 
-export const HAVE_FIRST_RUN_PRIVACY = "No password. Looking uses encrypted Bluetooth to phones close by.";
+export const HAVE_FIRST_RUN_PRIVACY = "Your list is shared with nearby phones only when you check in.";
 
 export const INSTALL_HEADING = "Add to Home Screen";
 
-export const INSTALL_NO_ACCOUNT = "No. Lists live on the phone. No password.";
+export const INSTALL_NO_ACCOUNT = "Your lists stay on this phone. You don’t need an account.";
 
 export const INSTALL_IPHONE = "iPhone: Safari → Share → Add to Home Screen.";
 
 export const INSTALL_ANDROID = "Android: Chrome menu → Add to Home screen or Install app.";
 
 export const PRIVACY_LISTS =
-  "Lists stay on the phone until you tap I’m looking. Then your name and those cards go over encrypted Bluetooth to phones close by. Anyone using TableTrade nearby can read them. A phone that only listens cannot.";
+  "Your lists stay on your phone until you check in. Then your name, your lists and your note go to other TableTrade phones nearby. Your photo is not sent. A phone that is only listening cannot read that.";
 
-export const PRIVACY_PING = "A ping when someone close by is a match. Same room, not across town.";
+export const PRIVACY_PING = "You’ll get a ping when someone nearby is a match.";
 
 export const PRIVACY_FAN = "TableTrade is an unofficial fan tool.";
 
-export const PING_HERE = "is close by";
+export const PING_HERE = "is nearby";
 
-export const CHECKIN_CTA = "I’m looking";
+export const CHECKIN_CTA = "Check in";
 
-export const LEAVE_LOOKING = "Done looking";
+export const LEAVE_LOOKING = "Done";
 
-export const HERE_NOTE_LABEL = "I’m over here";
+export const HERE_NOTE_LABEL = "How to find you";
 
 export const HERE_NOTE_PLACEHOLDER = "Red hoodie. Back table.";
 
@@ -57,8 +54,6 @@ export const HERE_NOTE_HINT = "Optional. So they can spot you in the room.";
 export const HERE_NOTE_MAX = 40;
 
 export const COMPANY = "Range Road Technologies";
-
-export const BUILT_BY = "Built by Matthew Sumegi";
 
 export const SITE_HOME = "https://rangeroadtech.com/";
 
@@ -78,7 +73,7 @@ export const AGE_NO = "I’m not";
 
 export const AGE_BLOCKED = "TableTrade is for people 13 or older.";
 
-export const RADIO_DOWN = "Looking needs Bluetooth on this phone.";
+export const RADIO_DOWN = "Turn Bluetooth on to check in.";
 
 export const LOCATION_OFF_HINT =
   "Turn on Location to find traders. Android 11 and older need Location on for Bluetooth to see nearby phones. TableTrade does not use your GPS position.";
@@ -89,14 +84,13 @@ export const LOCATION_ASK =
 export const PERMISSION_LOCATION =
   "Allow Location so Bluetooth can find nearby phones. TableTrade does not use your GPS position.";
 
-export const PERMISSION_NEARBY = "Allow Nearby devices, then tap I’m looking.";
+export const PERMISSION_NEARBY = "Allow Nearby devices, then tap Check in.";
 
 export const OPEN_APP_SETTINGS = "Open app settings";
 
 export const OPEN_LOCATION_SETTINGS = "Open Location settings";
 
-export const BLUETOOTH_OFF_HINT =
-  "Turn Bluetooth on to find traders. Looking talks to phones close by over Bluetooth.";
+export const BLUETOOTH_OFF_HINT = "Turn Bluetooth on to find traders.";
 
 export const TURN_ON_BLUETOOTH = "Turn on Bluetooth";
 
@@ -109,4 +103,4 @@ export const HEAR_AGAIN = "Hear pings again";
 
 export const REPORT_PEER = "Don’t show this person";
 
-export const MATCH_PRINTING = "Match is the same printing, not any card with that name.";
+export const MATCH_PRINTING = "A match is the same card from the same set, not just the same name.";

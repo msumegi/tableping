@@ -17,9 +17,9 @@ export function permissionSentence(needsLocation: boolean): string {
   return needsLocation ? PERMISSION_LOCATION : PERMISSION_NEARBY;
 }
 
-/** One I'm looking tap may ask the system once. */
+/** One Check in tap may ask the system once. */
 export function tapLooking(state: PermissionUi): PermissionUi {
-  return { ...state, looking: false, hint: "Turning looking on…", requests: state.requests + 1 };
+  return { ...state, looking: false, hint: "Checking in…", requests: state.requests + 1 };
 }
 
 /** A denial parks looking. It does not ask again. */
@@ -37,7 +37,7 @@ export function permissionDenied(
 
 /**
  * Coming back from the dialog or from app settings rechecks only.
- * A granted permission clears the message. Looking stays off until I'm looking is tapped.
+ * A granted permission clears the message. Check in stays off until Check in is tapped.
  */
 export function resumePermission(state: PermissionUi, granted: boolean): PermissionUi {
   if (state.block !== "permission" && state.block !== "settings") return state;

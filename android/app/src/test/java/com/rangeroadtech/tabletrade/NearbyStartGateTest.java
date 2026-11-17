@@ -37,7 +37,13 @@ public class NearbyStartGateTest {
     public void bluetoothOffWinsOnEveryApi() {
         assertEquals(NearbyStartGate.BLUETOOTH_OFF, NearbyStartGate.blockCode(28, false, true));
         assertEquals(NearbyStartGate.BLUETOOTH_OFF, NearbyStartGate.blockCode(31, false, false));
-        assertTrue(NearbyStartGate.messageFor(NearbyStartGate.BLUETOOTH_OFF).contains("Turn Bluetooth on"));
+        assertEquals(
+                "Turn Bluetooth on to find traders.",
+                NearbyStartGate.messageFor(NearbyStartGate.BLUETOOTH_OFF));
+        assertEquals(
+                "Allow Nearby devices, then tap Check in.",
+                NearbyStartGate.PERMISSION_NEARBY);
+        assertEquals("Turn Bluetooth on to check in.", NearbyStartGate.messageFor("OTHER"));
         assertEquals(4_000L, NearbyRetry.backoffMs(1));
         assertEquals(8_000L, NearbyRetry.backoffMs(2));
         assertEquals(16_000L, NearbyRetry.backoffMs(3));

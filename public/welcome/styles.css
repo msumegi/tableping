@@ -72,6 +72,8 @@
   --paper-2: #d9ccb0;
   --ember: #ff6b35;
   --ember-ink: #2a1008;
+  --btn-primary: #e85a24;
+  --btn-primary-pressed: #cf4d1c;
   --electric: #f5d76e;
   --ok: #8fd6a8;
   --muted: #b7a88e;
@@ -282,17 +284,24 @@ h1 {
   min-height: 54px;
   padding: 0 22px;
   border-radius: 16px;
-  background: var(--ember);
-  color: var(--ember-ink);
+  background: var(--btn-primary);
+  color: #ffffff;
   text-decoration: none;
   font-weight: 700;
-  font-size: 1.05rem;
-  box-shadow: 0 12px 28px rgba(255, 107, 53, 0.28);
+  font-size: 19px;
+  box-shadow: 0 12px 28px rgba(232, 90, 36, 0.28);
 }
 
-.cta:hover,
+.cta:hover {
+  background: var(--btn-primary);
+}
+
+.cta:active {
+  background: var(--btn-primary-pressed);
+}
+
 .cta:focus-visible {
-  background: #ff8355;
+  background: var(--btn-primary);
 }
 
 .cta-note {

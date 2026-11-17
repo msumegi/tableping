@@ -113,7 +113,7 @@ export function scanReducer(state: ScanState, action: ScanAction): ScanState {
         phase: "pick",
         candidates: action.candidates,
         chosen: null,
-        notice: "Which printing?",
+        notice: "Which set and number?",
       };
     }
     case "choose":
@@ -160,7 +160,7 @@ export function scanReducer(state: ScanState, action: ScanAction): ScanState {
           phase: "pick",
           candidates: rest,
           chosen: null,
-          notice: "Which printing?",
+          notice: "Which set and number?",
           typeaheadOpen: false,
         };
       }

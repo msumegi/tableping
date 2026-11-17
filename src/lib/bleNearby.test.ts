@@ -94,7 +94,7 @@ describe("nearby radio errors", () => {
     expect(nearbyBlockFromError({ code: "LOCATION_OFF", message: "Turn on Location" })).toBe("location");
     expect(nearbyBlockFromError({ code: "BLUETOOTH_OFF" })).toBe("bluetooth");
     expect(nearbyBlockFromError(new Error("LOCATION_OFF"))).toBe("location");
-    expect(nearbyBlockFromError(new Error("Allow Bluetooth, then tap I’m looking."))).toBeNull();
+    expect(nearbyBlockFromError(new Error("Allow Bluetooth, then tap Check in."))).toBeNull();
     expect(nearbyBlockFromError({ code: "PERMISSION_BLOCKED" })).toBe("settings");
     expect(nearbyBlockFromError({ code: "PERMISSION_DENIED" })).toBe("permission");
   });

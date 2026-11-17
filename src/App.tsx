@@ -36,7 +36,6 @@ import {
   INSTALL_IPHONE,
   INSTALL_NO_ACCOUNT,
   LEAVE_LOOKING,
-  locationHintCopy,
   NEARBY_LEDE,
   PING_HERE,
   PRIVACY_FAN,
@@ -47,7 +46,6 @@ import {
   SITE_PRIVACY,
   HELP_MAIL,
   COMPANY,
-  BUILT_BY,
   WANT_LEDE,
   YOU_LEDE,
   YOU_PHOTO_HINT,
@@ -176,7 +174,7 @@ export default function App() {
           pendingBlockRef.current = "settings";
           return;
         }
-        setHintStatus("Turning looking on…");
+        setHintStatus("Checking in…");
         try {
           stopNearbyRef.current = await startPhoneNearby(
             currentPresence(),
@@ -470,7 +468,7 @@ export default function App() {
           <h1 className="brand" aria-label="TableTrade">
             Table<span>Trade</span>
           </h1>
-          <p className="tag">Pokémon trades here, now. Close by.</p>
+          <p className="tag">Trade Pokémon cards easily.</p>
         </div>
         {activePing ? <span className="pill ok">Ping</span> : <span className="pill">{settings.displayName}</span>}
       </header>
@@ -481,7 +479,7 @@ export default function App() {
             title="Have list"
             lede={HAVE_LEDE}
             cards={have}
-            empty="Nothing yet. Add a card you’d trade."
+            empty="Nothing yet. Add a card you want to trade away."
             intro={have.length === 0 ? <HaveFirstRun showInstall={!isStandalonePwa() && !Capacitor.isNativePlatform()} /> : null}
             onAdd={() => setAddingFor("have")}
             onRemove={(id) => setHave((prev) => removeCard(prev, id))}
@@ -668,22 +666,23 @@ function NearbyPane({
 }) {
   return (
     <section>
-      <div className="nearby-hero">
-        <div className="radar" aria-hidden>
-          <span className="dot" />
+      {radioBlock ? null : (
+        <div className="nearby-hero">
+          <div className="radar" aria-hidden>
+            <span className="dot" />
+          </div>
+          <p className="lede" style={{ color: "rgba(243,234,216,0.78)" }}>
+            {NEARBY_LEDE}
+          </p>
         </div>
-        <h2>Trade here, now.</h2>
-        <p className="lede" style={{ color: "rgba(243,234,216,0.78)" }}>
-          {NEARBY_LEDE}
-        </p>
-      </div>
+      )}
 
       <div className="you-card stack checkin-card">
         {looking ? (
           <>
             <div className="toggle-row">
               <div>
-                <strong>You’re looking</strong>
+                <strong>You’re checked in</strong>
                 <p className="hint">{checkInHint(true)}</p>
               </div>
               <button className="btn secondary" onClick={onStopLooking}>
@@ -702,17 +701,11 @@ function NearbyPane({
               onChange={(e) => onLookingNote(e.target.value.slice(0, HERE_NOTE_MAX))}
             />
             <p className="hint">{HERE_NOTE_HINT}</p>
-            {!settings.photo ? <p className="hint">{YOU_PHOTO_HINT} Add one on You.</p> : null}
             {legacyHint ? <p className="callout warn" role="status">{legacyHint}</p> : null}
             {hintStatus ? <p className="hint">{hintStatus}</p> : null}
           </>
         ) : (
           <>
-            <div>
-              <strong>Check in</strong>
-              <p className="hint">{checkInHint(false)}</p>
-            </div>
-            <p className="hint">{locationHintCopy()}</p>
             {showLocationAsk(needsLocation, radioBlock) ? <p className="hint">{LOCATION_ASK}</p> : null}
             <button className="btn ember full" onClick={onStartLooking}>
               {CHECKIN_CTA}
@@ -864,7 +857,7 @@ function YouPane({
         <li>{PRIVACY_FAN}</li>
       </ul>
       <p className="hint">
-        A product of {COMPANY}. {BUILT_BY}.
+        A product of {COMPANY}.
       </p>
       <ul className="privacy-lines">
         <li>
@@ -911,7 +904,7 @@ function PingSheet({ match, onClose, onBlock }: { match: TradeMatch; onClose: ()
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="grab" />
         <Face name={match.peer.name} photo={match.peer.photo} large />
-        <div className="ping-kicker">{match.source === "demo" ? "Demo ping" : "Here, now"}</div>
+        <div className="ping-kicker">{match.source === "demo" ? "Demo ping" : "Match"}</div>
         <h2 className="ping-title">
           {match.peer.name} {PING_HERE}
         </h2>
@@ -936,7 +929,6 @@ function PingSheet({ match, onClose, onBlock }: { match: TradeMatch; onClose: ()
             match.
           </p>
         ) : null}
-        <p className="hint">You’re here. Go talk.</p>
         <div className="sheet-actions">
           <button className="btn ember full" onClick={onClose}>
             Go talk

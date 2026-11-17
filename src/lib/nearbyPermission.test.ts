@@ -33,7 +33,8 @@ describe("location permission", () => {
     expect(blocked.looking).toBe(false);
     expect(blocked.block).toBe("settings");
     expect(blocked.hint).toBe(PERMISSION_LOCATION);
-    expect(blocked.hint).not.toMatch(/Turning looking on/);
+    expect(tapLooking(idle).hint).toBe("Checking in…");
+    expect(blocked.hint).not.toMatch(/Turning looking on|Checking in/);
     expect(blocked.requests).toBe(1);
     const stillDenied = resumePermission(blocked, false);
     expect(stillDenied.requests).toBe(1);

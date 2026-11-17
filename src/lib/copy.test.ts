@@ -15,7 +15,6 @@ import {
   INSTALL_ANDROID,
   INSTALL_IPHONE,
   INSTALL_NO_ACCOUNT,
-  locationHintCopy,
   LOCATION_OFF_HINT,
   LOCATION_ASK,
   OPEN_LOCATION_SETTINGS,
@@ -45,41 +44,39 @@ const app = readFileSync(join(root, "src/App.tsx"), "utf8");
 const copySrc = readFileSync(join(root, "src/lib/copy.ts"), "utf8");
 
 describe("check-in hint", () => {
-  it("shows the quiet line when you have not checked in", () => {
-    expect(checkInHint(false)).toBe("Your phone stays quiet. The app is off.");
+  it("has no standing line before check-in", () => {
+    expect(checkInHint(false)).toBe("");
+    expect(copySrc).not.toContain("The app is off");
+    expect(copySrc).not.toContain("Keep Bluetooth on");
   });
 
-  it("says you are looking after check-in", () => {
-    expect(checkInHint(true)).toMatch(/You’re looking/);
+  it("tells you to keep the app open after check-in", () => {
+    expect(checkInHint(true)).toBe("Keep the app open. You’ll get a ping if someone nearby is a match.");
   });
 });
 
 describe("join and first-run copy", () => {
-  it("echoes the site how-it-works on empty Have, with looking as the join", () => {
+  it("explains Have in plain language and names Check in", () => {
     const text = `${HAVE_FIRST_RUN_TITLE} ${HAVE_FIRST_RUN_BODY} ${HAVE_FIRST_RUN_PRIVACY}`;
-    expect(HAVE_FIRST_RUN_TITLE).toBe("Here. Close by.");
-    expect(HAVE_FIRST_RUN_BODY).toMatch(/I’m looking/);
-    expect(HAVE_FIRST_RUN_BODY).toMatch(/lists overlap/);
+    expect(HAVE_FIRST_RUN_TITLE).toBe("Get started.");
+    expect(HAVE_FIRST_RUN_BODY).toMatch(/press Check in/);
+    expect(HAVE_FIRST_RUN_BODY).toMatch(/both phones ping/);
     expect(HAVE_FIRST_RUN_BODY).toMatch(/Then you talk/);
-    expect(HAVE_FIRST_RUN_PRIVACY).toMatch(/Bluetooth/);
+    expect(HAVE_FIRST_RUN_PRIVACY).toBe("Your list is shared with nearby phones only when you check in.");
+    expect(HAVE_FIRST_RUN_PRIVACY).not.toMatch(/encrypted|private|password/i);
     expect(text.split(/\s+/).length).toBeLessThan(80);
   });
 
-  it("treats I’m looking as the real join", () => {
-    expect(NEARBY_LEDE).toMatch(/I’m looking/);
-    expect(NEARBY_LEDE).toMatch(/buzzes you|ping/i);
-    expect(NEARBY_LEDE).toMatch(/I’m over here/);
+  it("names the action Check in", () => {
+    expect(NEARBY_LEDE).toBe(
+      "Press Check in when you’re at a shop or event. You’ll get a ping if your lists match someone nearby.",
+    );
     expect(NEARBY_LEDE).not.toMatch(/table code|QR/);
-    expect(CHECKIN_CTA).toBe("I’m looking");
-    expect(PING_HERE).toBe("is close by");
-    expect(HERE_NOTE_LABEL).toBe("I’m over here");
-  });
-
-  it("uses location for close-by, not a shop list", () => {
-    expect(locationHintCopy()).toBe("Bluetooth finds who is close in the room. Keep Bluetooth on.");
-    expect(locationHintCopy()).not.toMatch(/history/i);
-    expect(locationHintCopy()).not.toMatch(/hint the shop/i);
-    expect(locationHintCopy()).not.toMatch(/break GPS|basements often/i);
+    expect(CHECKIN_CTA).toBe("Check in");
+    expect(PING_HERE).toBe("is nearby");
+    expect(HERE_NOTE_LABEL).toBe("How to find you");
+    expect(copySrc).not.toMatch(/I’m looking|I'm looking/);
+    expect(app).not.toMatch(/I’m looking|I'm looking/);
   });
 
   it("tells Android 11 and older to turn Location on, without using GPS", () => {
@@ -101,10 +98,10 @@ describe("join and first-run copy", () => {
     expect(app).toContain("LISTS_TOO_BIG");
     expect(app).toContain("!isStandalonePwa() && !Capacitor.isNativePlatform()");
     expect(app).toContain("showInstall={!Capacitor.isNativePlatform()}");
-    expect(HAVE_FIRST_RUN_PRIVACY).toMatch(/encrypted Bluetooth/);
-    expect(PRIVACY_LISTS).toMatch(/encrypted Bluetooth/);
-    expect(PRIVACY_LISTS).toMatch(/Anyone using TableTrade nearby can read them/);
-    expect(PRIVACY_LISTS).not.toMatch(/Anyone looking nearby/);
+    expect(HAVE_FIRST_RUN_PRIVACY).not.toMatch(/encrypted/);
+    expect(PRIVACY_LISTS).not.toMatch(/encrypted|secure|private/i);
+    expect(PRIVACY_LISTS).toMatch(/Your photo is not sent/);
+    expect(PRIVACY_LISTS).toMatch(/only listening cannot read/);
     expect(app).toContain("OPEN_LOCATION_SETTINGS");
     expect(app).toContain("TURN_ON_BLUETOOTH");
     expect(app).toContain("openPhoneLocationSettings");
@@ -117,7 +114,7 @@ describe("join and first-run copy", () => {
   });
 
   it("echoes the site FAQ for install and account", () => {
-    expect(INSTALL_NO_ACCOUNT).toBe("No. Lists live on the phone. No password.");
+    expect(INSTALL_NO_ACCOUNT).toBe("Your lists stay on this phone. You don’t need an account.");
     expect(INSTALL_IPHONE).toMatch(/Safari/);
     expect(INSTALL_IPHONE).toMatch(/Share/);
     expect(INSTALL_IPHONE).toMatch(/Add to Home Screen/);
@@ -126,11 +123,11 @@ describe("join and first-run copy", () => {
   });
 
   it("echoes site privacy and strengths-only product lines", () => {
-    expect(HAVE_LEDE).toBe("Cards you’d trade here, now.");
-    expect(WANT_LEDE).toBe("What you’re hunting.");
-    expect(YOU_LEDE).toMatch(/Lists live on the phone/);
-    expect(YOU_WHAT).toBe("Pokémon trades close by. Match, then talk.");
-    expect(PRIVACY_LISTS).toMatch(/I’m looking/);
+    expect(HAVE_LEDE).toBe("Cards you want to trade away.");
+    expect(WANT_LEDE).toBe("Cards you want.");
+    expect(YOU_LEDE).toBe("Your lists stay on your phone. No account needed.");
+    expect(YOU_WHAT).toBe("Trade Pokémon cards with people near you. When you match, go talk.");
+    expect(PRIVACY_LISTS).toMatch(/until you check in/);
     expect(PRIVACY_PING).toMatch(/ping/i);
     expect(PRIVACY_FAN).toBe("TableTrade is an unofficial fan tool.");
   });
@@ -142,7 +139,10 @@ describe("join and first-run copy", () => {
     expect(SITE_APP_PAGE).toContain("rangeroadtech.com/apps/tabletrade");
     expect(app).toContain("SITE_HOME");
     expect(app).toContain("HELP_MAIL");
-    expect(app).toContain("BUILT_BY");
+    expect(app).toContain("A product of {COMPANY}.");
+    expect(app).not.toContain("BUILT_BY");
+    expect(copySrc).not.toContain("BUILT_BY");
+    expect(copySrc).not.toMatch(/Matthew|Sumegi/);
   });
 
   it("keeps player-facing copy free of Tinder and we-don’t-do lists", () => {
@@ -156,13 +156,37 @@ describe("join and first-run copy", () => {
   });
 });
 
-describe("Nearby leads with I’m looking", () => {
-  it("heroes I’m looking and has no shop list or table join", () => {
+describe("Nearby leads with Check in", () => {
+  it("hides the radar while a permission prompt is up and has no shop list", () => {
     const nearby = app.slice(app.indexOf("function NearbyPane"));
-    expect(nearby.search(/I’m looking|CHECKIN_CTA|onStartLooking/)).toBeGreaterThan(-1);
+    expect(nearby).toMatch(/radioBlock \? null : \([\s\S]*nearby-hero/);
+    expect(nearby).toContain("CHECKIN_CTA");
+    expect(nearby).not.toContain("Trade here, now.");
     expect(nearby).not.toMatch(/optional-table|This table|Type their table code/);
     expect(nearby).not.toMatch(/Search shops|Hint the shop|This shop’s name/);
     expect(app).toMatch(/startLooking/);
     expect(app).toMatch(/canUsePhoneNearby|startPhoneNearby/);
+  });
+});
+
+describe("primary buttons", () => {
+  it("uses the primary button token, white text, and large bold type", () => {
+    const css = readFileSync(join(root, "src/index.css"), "utf8");
+    const btn = css.match(/\.btn \{[^}]+\}/)?.[0] ?? "";
+    const ember = css.match(/\.btn\.ember \{[^}]+\}/)?.[0] ?? "";
+    expect(css).toMatch(/--ember:\s*#ff6b35/);
+    expect(css).toMatch(/--btn-primary:\s*#e85a24/);
+    expect(css).toMatch(/--btn-primary-pressed:\s*#cf4d1c/);
+    expect(btn).toMatch(/background:\s*var\(--btn-primary\)/);
+    expect(btn).toMatch(/color:\s*#ffffff/);
+    expect(btn).toMatch(/font-weight:\s*700/);
+    expect(btn).toMatch(/font-size:\s*19px/);
+    expect(btn).not.toMatch(/--ember|--electric|#f5d76e|#ff6b35|#1c1410/);
+    expect(ember).toMatch(/background:\s*var\(--btn-primary\)/);
+    expect(ember).toMatch(/color:\s*#ffffff/);
+    expect(css).toMatch(/\.btn:hover\s*\{[^}]*background:\s*var\(--btn-primary\)/);
+    expect(css).toMatch(/\.btn:active\s*\{[^}]*background:\s*var\(--btn-primary-pressed\)/);
+    expect(css).toMatch(/\.btn:disabled\s*\{[^}]*background:\s*var\(--btn-primary\)/);
+    expect(css).toMatch(/\.btn:disabled\s*\{[^}]*color:\s*#ffffff/);
   });
 });

@@ -50,6 +50,8 @@
   --paper: #f3ead8;
   --paper-dim: #d9ccb3;
   --ember: #ff6b35;
+  --btn-primary: #e85a24;
+  --btn-primary-pressed: #cf4d1c;
   --electric: #f5d76e;
   --ok: #8fd6a8;
   --muted: #9a8f7e;
@@ -315,9 +317,10 @@ img {
   border: 0;
   border-radius: 999px;
   padding: 12px 16px;
-  font-weight: 650;
-  background: var(--electric);
-  color: var(--ink);
+  font-weight: 700;
+  font-size: 19px;
+  background: var(--btn-primary);
+  color: #ffffff;
 }
 
 .btn.secondary {
@@ -327,8 +330,8 @@ img {
 }
 
 .btn.ember {
-  background: var(--ember);
-  color: #fff;
+  background: var(--btn-primary);
+  color: #ffffff;
 }
 
 .btn.felt {
@@ -340,8 +343,52 @@ img {
   width: 100%;
 }
 
+.btn:hover {
+  background: var(--btn-primary);
+}
+
+.btn:active {
+  background: var(--btn-primary-pressed);
+}
+
+.btn.secondary:hover,
+.btn.secondary:active {
+  background: transparent;
+}
+
+.btn.felt:hover,
+.btn.felt:active {
+  background: var(--felt-2);
+}
+
+.btn:focus-visible {
+  background: var(--btn-primary);
+  outline: 2px solid var(--paper);
+  outline-offset: 2px;
+}
+
+.btn.secondary:focus-visible {
+  background: transparent;
+}
+
+.btn.felt:focus-visible {
+  background: var(--felt-2);
+}
+
 .btn:disabled {
   opacity: 0.5;
+  background: var(--btn-primary);
+  color: #ffffff;
+}
+
+.btn.secondary:disabled {
+  background: transparent;
+  color: var(--paper);
+}
+
+.btn.felt:disabled {
+  background: var(--felt-2);
+  color: var(--paper);
 }
 
 .search-sheet,

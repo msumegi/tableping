@@ -13,11 +13,11 @@ public final class NearbyStartGate {
     public static final String LOCATION_OFF_MESSAGE =
             "Turn on Location to find traders. Android 11 and older need Location on for Bluetooth to see nearby phones. TableTrade does not use your GPS position.";
     public static final String BLUETOOTH_OFF_MESSAGE =
-            "Turn Bluetooth on to find traders. Looking talks to phones close by over Bluetooth.";
+            "Turn Bluetooth on to find traders.";
     public static final String PERMISSION_LOCATION =
             "Allow Location so Bluetooth can find nearby phones. TableTrade does not use your GPS position.";
     public static final String PERMISSION_NEARBY =
-            "Allow Nearby devices, then tap I’m looking.";
+            "Allow Nearby devices, then tap Check in.";
     public static final String PERMISSION_DENIED = "PERMISSION_DENIED";
     public static final String PERMISSION_BLOCKED = "PERMISSION_BLOCKED";
 
@@ -35,7 +35,7 @@ public final class NearbyStartGate {
     }
 
     /**
-     * A permission dialog is only for an explicit I'm looking tap.
+     * A permission dialog is only for an explicit Check in tap.
      * After Don't ask again, alreadyAsked is true and showRationale is false, so we must not ask again.
      */
     public static boolean shouldRequestPermission(boolean granted, boolean alreadyAsked, boolean showRationale) {
@@ -47,6 +47,6 @@ public final class NearbyStartGate {
     public static String messageFor(String code) {
         if (LOCATION_OFF.equals(code)) return LOCATION_OFF_MESSAGE;
         if (BLUETOOTH_OFF.equals(code)) return BLUETOOTH_OFF_MESSAGE;
-        return "Looking needs Bluetooth on this phone.";
+        return "Turn Bluetooth on to check in.";
     }
 }

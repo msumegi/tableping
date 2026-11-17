@@ -61,7 +61,7 @@ export function kindLabel(kind: MatchKind): string {
 export function sourceLabel(source: MatchSource): string {
   switch (source) {
     case "shop":
-      return "Here";
+      return "Shop";
     case "demo":
       return "Demo";
     case "table":
@@ -69,8 +69,8 @@ export function sourceLabel(source: MatchSource): string {
     case "qr":
       return "QR";
     case "gps":
-      return "Close by";
+      return "Nearby";
     case "ble":
-      return "Close by";
+      return "Nearby";
   }
 }

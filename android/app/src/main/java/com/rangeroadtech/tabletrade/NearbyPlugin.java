@@ -185,7 +185,7 @@ public class NearbyPlugin extends Plugin {
         public void onStartFailure(int errorCode) {
             Log.w(TAG, "advertise fail " + errorCode);
             if (pendingStart != null) {
-                failStart("Could not share over Bluetooth. Try I’m looking again.");
+                failStart("Try Check in again.");
             }
         }
     };
@@ -345,7 +345,7 @@ public class NearbyPlugin extends Plugin {
     @SuppressLint("MissingPermission")
     private void begin(PluginCall call) {
         if (!getContext().getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-            call.reject("This phone cannot use Bluetooth looking.");
+            call.reject("This phone cannot find nearby traders over Bluetooth.");
             return;
         }
         BluetoothManager mgr = manager();
@@ -393,11 +393,11 @@ public class NearbyPlugin extends Plugin {
             ch.setValue(new byte[0]);
             service.addCharacteristic(ch);
             if (!gattServer.addService(service)) {
-                failStart("Could not start Bluetooth looking.");
+                failStart("Could not start Check in.");
             }
         } catch (Exception e) {
             Log.e(TAG, "start", e);
-            failStart("Could not start Bluetooth looking.");
+            failStart("Could not start Check in.");
         }
     }
 
@@ -421,7 +421,7 @@ public class NearbyPlugin extends Plugin {
         if (!running) return;
         BluetoothManager mgr = manager();
         if (mgr == null || mgr.getAdapter() == null) {
-            failStart("Turn Bluetooth on, then tap I’m looking.");
+            failStart("Turn Bluetooth on, then tap Check in.");
             return;
         }
         advertiser = mgr.getAdapter().getBluetoothLeAdvertiser();
@@ -435,7 +435,7 @@ public class NearbyPlugin extends Plugin {
             main.postDelayed(rotateToken, TOKEN_ROTATE_MS);
         } catch (Exception e) {
             Log.e(TAG, "advertise", e);
-            failStart("Could not share over Bluetooth. Try I’m looking again.");
+            failStart("Try Check in again.");
         }
     }
 
@@ -750,7 +750,7 @@ public class NearbyPlugin extends Plugin {
         @Override
         public void onServiceAdded(int status, BluetoothGattService service) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
-                failStart("Could not start Bluetooth looking.");
+                failStart("Could not start Check in.");
                 return;
             }
             startAdvertiseAndScan();
