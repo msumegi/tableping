@@ -311,13 +311,44 @@ img {
   margin-top: 8px;
 }
 
-.about summary {
+.about-toggle {
+  width: 100%;
   min-height: 48px;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--paper);
+  font-weight: 650;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  text-align: left;
   cursor: pointer;
-  font-weight: 650;
-  color: var(--paper);
+}
+
+.about-toggle:active {
+  background: rgba(243, 234, 216, 0.08);
+}
+
+.about-toggle:focus-visible {
+  outline: 2px solid var(--paper);
+  outline-offset: 2px;
+}
+
+.about-chevron {
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  flex-shrink: 0;
+}
+
+.about-toggle[aria-expanded="true"] .about-chevron {
+  transform: rotate(45deg);
 }
 
 .about .hint,

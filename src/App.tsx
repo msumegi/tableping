@@ -770,6 +770,7 @@ function YouPane({
   onDemoMode: (on: boolean) => void;
   onDemo: () => void;
 }) {
+  const [aboutOpen, setAboutOpen] = useState(false);
   return (
     <section>
       <h2 className="panel-title">You</h2>
@@ -833,25 +834,38 @@ function YouPane({
           )}
         </>
       ) : null}
-      <details className="about">
-        <summary>About</summary>
-        <p className="hint">{MATCH_PRINTING}</p>
-        <p className="hint">A product of {COMPANY}.</p>
-        <ul className="privacy-lines">
-          <li>
-            <a href={SITE_APP_PAGE}>About TableTrade</a>
-          </li>
-          <li>
-            <a href={SITE_HOME}>{COMPANY}</a>
-          </li>
-          <li>
-            <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>
-          </li>
-          <li>
-            <a href={SITE_PRIVACY}>Privacy</a>
-          </li>
-        </ul>
-      </details>
+      <div className="about">
+        <button
+          type="button"
+          className="about-toggle"
+          aria-expanded={aboutOpen}
+          aria-controls="about-panel"
+          onClick={() => setAboutOpen((open) => !open)}
+        >
+          About
+          <span className="about-chevron" aria-hidden="true" />
+        </button>
+        {aboutOpen ? (
+          <div id="about-panel">
+            <p className="hint">{MATCH_PRINTING}</p>
+            <p className="hint">A product of {COMPANY}.</p>
+            <ul className="privacy-lines">
+              <li>
+                <a href={SITE_APP_PAGE}>About TableTrade</a>
+              </li>
+              <li>
+                <a href={SITE_HOME}>{COMPANY}</a>
+              </li>
+              <li>
+                <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>
+              </li>
+              <li>
+                <a href={SITE_PRIVACY}>Privacy</a>
+              </li>
+            </ul>
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }
