@@ -8,9 +8,9 @@ export type PermissionUi = {
   requests: number;
 };
 
-/** The “Android will ask…” line is only useful before the first denial. */
+/** The “Android will ask…” line is only useful before a denial or a radio error. */
 export function showLocationAsk(needsLocation: boolean, block: NearbyBlock | null): boolean {
-  return needsLocation && block !== "permission" && block !== "settings";
+  return needsLocation && block === null;
 }
 
 export function permissionSentence(needsLocation: boolean): string {

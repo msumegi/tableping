@@ -51,6 +51,8 @@ describe("location permission", () => {
     expect(showLocationAsk(true, null)).toBe(true);
     expect(showLocationAsk(true, "permission")).toBe(false);
     expect(showLocationAsk(true, "settings")).toBe(false);
+    expect(showLocationAsk(true, "location")).toBe(false);
+    expect(showLocationAsk(true, "bluetooth")).toBe(false);
     expect(showLocationAsk(false, null)).toBe(false);
   });
 
