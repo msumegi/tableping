@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import nearbyMark from "../resources/icon-g.svg?raw";
+import nearbyMarkSource from "../resources/icon-g.svg?raw";
+
+/** Zoom the Nearby disc only. Outer ring ≈ 84% of the 104px circle; launcher art stays full-frame. */
+const nearbyMark = nearbyMarkSource.replace(
+  'viewBox="0 0 108 108"',
+  'viewBox="14.833 14.833 78.333 78.333"',
+);
 import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import type { Card, MatchSource, Presence, Settings, Tab, TradeMatch } from "./types";
