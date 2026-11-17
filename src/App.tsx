@@ -909,8 +909,8 @@ function PingSheet({ match, onClose, onBlock }: { match: TradeMatch; onClose: ()
           </p>
         ) : null}
         <div className="sheet-actions">
-          <button className="btn ember full" onClick={onClose}>
-            Go talk
+          <button className="btn ember full" aria-label="Got it" onClick={onClose}>
+            Got it
           </button>
           {match.source !== "demo" ? (
             <button className="btn secondary full" onClick={() => onBlock(match.peer.userId)}>
