@@ -36,7 +36,7 @@ import {
   SITE_HOME,
   WANT_LEDE,
   YOU_LEDE,
-  YOU_WHAT,
+  YOU_SHARED,
 } from "./copy";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -126,7 +126,10 @@ describe("join and first-run copy", () => {
     expect(HAVE_LEDE).toBe("Cards you want to trade away.");
     expect(WANT_LEDE).toBe("Cards you want.");
     expect(YOU_LEDE).toBe("Your lists stay on your phone. No account needed.");
-    expect(YOU_WHAT).toBe("Trade Pokémon cards with people near you. When you match, meet up and trade.");
+    expect(YOU_SHARED).toBe(
+      "When you check in, nearby traders get your name, how to find you, and your card lists.",
+    );
+    expect(YOU_SHARED).not.toMatch(/Nothing else/);
     expect(PRIVACY_LISTS).toMatch(/until you check in/);
     expect(PRIVACY_PING).toMatch(/ping/i);
     expect(PRIVACY_FAN).toBe("TableTrade is an unofficial fan tool.");
@@ -152,7 +155,7 @@ describe("join and first-run copy", () => {
     expect(surface).not.toMatch(/One Piece/);
     expect(surface).not.toMatch(/Lootstack/i);
     expect(surface).not.toMatch(/marketplace/i);
-    expect(YOU_WHAT).not.toMatch(/later meetup|not a/i);
+    expect(YOU_SHARED).not.toMatch(/later meetup|not a/i);
   });
 });
 

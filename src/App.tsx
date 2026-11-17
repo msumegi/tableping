@@ -771,6 +771,11 @@ function YouPane({
   onDemo: () => void;
 }) {
   const [aboutOpen, setAboutOpen] = useState(false);
+  const aboutPanelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!aboutOpen) return;
+    aboutPanelRef.current?.scrollIntoView({ block: "nearest" });
+  }, [aboutOpen]);
   return (
     <section>
       <h2 className="panel-title">You</h2>
@@ -845,26 +850,25 @@ function YouPane({
           About
           <span className="about-chevron" aria-hidden="true" />
         </button>
-        {aboutOpen ? (
-          <div id="about-panel">
-            <p className="hint">{MATCH_PRINTING}</p>
-            <p className="hint">A product of {COMPANY}.</p>
-            <ul className="privacy-lines">
-              <li>
-                <a href={SITE_APP_PAGE}>About TableTrade</a>
-              </li>
-              <li>
-                <a href={SITE_HOME}>{COMPANY}</a>
-              </li>
-              <li>
-                <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>
-              </li>
-              <li>
-                <a href={SITE_PRIVACY}>Privacy</a>
-              </li>
-            </ul>
-          </div>
-        ) : null}
+        <div id="about-panel" hidden={!aboutOpen} ref={aboutPanelRef}>
+          <p className="hint">{MATCH_PRINTING}</p>
+          <p className="hint">A product of {COMPANY}.</p>
+          <p className="hint">{PRIVACY_FAN}</p>
+          <ul className="privacy-lines">
+            <li>
+              <a href={SITE_APP_PAGE}>About TableTrade</a>
+            </li>
+            <li>
+              <a href={SITE_HOME}>{COMPANY}</a>
+            </li>
+            <li>
+              <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>
+            </li>
+            <li>
+              <a href={SITE_PRIVACY}>Privacy</a>
+            </li>
+          </ul>
+        </div>
       </div>
     </section>
   );

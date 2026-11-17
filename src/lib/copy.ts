@@ -12,10 +12,8 @@ export const NEARBY_LEDE =
 
 export const YOU_LEDE = "Your lists stay on your phone. No account needed.";
 
-export const YOU_WHAT = "Trade Pokémon cards with people near you. When you match, meet up and trade.";
-
 export const YOU_SHARED =
-  "When you check in, nearby traders get your name, how to find you, and your card lists. Nothing else.";
+  "When you check in, nearby traders get your name, how to find you, and your card lists.";
 
 export const HAVE_FIRST_RUN_TITLE = "Get started.";
 
