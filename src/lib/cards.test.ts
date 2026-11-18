@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  CATALOG_BUDGET_MS,
+  PRIMARY_CATALOG_TIMEOUT_MS,
   QUICK_SEARCHES,
   SEARCH_UNAVAILABLE,
   findCardsFromScan,
@@ -66,8 +68,10 @@ describe("parseCatalogQuery", () => {
 
 describe("searchCards", () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    localStorage.clear();
   });
 
   it("returns [] for an empty or short query without calling the catalog", async () => {
@@ -102,6 +106,7 @@ describe("searchCards", () => {
     const cards = await searchCards("Pikachu");
     expect(fetchMock).toHaveBeenCalled();
     expect(JSON.stringify(fetchMock.mock.calls)).toContain("api.pokemontcg.io/v2/cards");
+    expect(JSON.stringify(fetchMock.mock.calls)).not.toContain("api.tcgdex.net");
     expect(JSON.stringify(fetchMock.mock.calls)).toContain("name");
     expect(cards).toEqual([
       {
@@ -165,6 +170,179 @@ describe("searchCards", () => {
     expect(cards.every((c) => c.id && c.name && c.image && "setName" in c && "number" in c)).toBe(
       true,
     );
+  });
+
+  it("uses TCGdex ids and images when the primary returns HTTP 500", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api.pokemontcg.io")) return jsonResponse({ error: "boom" }, 500);
+      if (url.includes("api.tcgdex.net/v2/en/cards?name=Charizard")) {
+        return jsonResponse([
+          {
+            id: "base1-4",
+            localId: "4",
+            name: "Charizard",
+            image: "https://assets.tcgdex.net/en/base/base1/4",
+            rarity: "Rare",
+          },
+          {
+            id: "sv03.5-006",
+            localId: "006",
+            name: "Charizard ex",
+            image: "https://assets.tcgdex.net/en/sv/sv03.5/006",
+          },
+          {
+            id: "swshp-SWSH050",
+            localId: "SWSH050",
+            name: "Charizard V",
+            image: "https://assets.tcgdex.net/en/swsh/swshp/SWSH050",
+          },
+          {
+            id: "A1-035",
+            localId: "035",
+            name: "Charizard",
+            image: "https://assets.tcgdex.net/en/tcgp/A1/035",
+          },
+        ]);
+      }
+      throw new Error(url);
+    }));
+
+    const listed = await searchCardList("Charizard");
+    expect(listed.savedOnly).toBe(false);
+    expect(listed.cards.map((card) => card.id)).toEqual(["base1-4", "sv3pt5-6", "swshp-SWSH050"]);
+    expect(listed.cards[0]).toMatchObject({
+      name: "Charizard",
+      number: "4",
+      setName: "Base",
+      image: "https://assets.tcgdex.net/en/base/base1/4/low.webp",
+      rarity: "Rare",
+    });
+    expect(listed.cards[1]).toMatchObject({ name: "Charizard ex", number: "6", setName: "151" });
+    expect(listed.cards[2]).toMatchObject({
+      name: "Charizard V",
+      number: "SWSH050",
+      setName: "SWSH Black Star Promos",
+      image: "https://assets.tcgdex.net/en/swsh/swshp/SWSH050/low.webp",
+    });
+    expect(listed.cards.some((card) => card.id.startsWith("A1-"))).toBe(false);
+  });
+
+  it("keeps a TCGdex result in the catalog cache", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api.pokemontcg.io")) return jsonResponse({ error: "boom" }, 500);
+      return jsonResponse([
+        {
+          id: "base1-4",
+          localId: "4",
+          name: "Charizard",
+          image: "https://assets.tcgdex.net/en/base/base1/4",
+        },
+      ]);
+    }));
+    const first = await searchCardList("Charizard");
+    expect(first.savedOnly).toBe(false);
+    expect(first.cards[0].image).toBe("https://assets.tcgdex.net/en/base/base1/4/low.webp");
+
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw new TypeError("Failed to fetch");
+    }));
+    const second = await searchCardList("Charizard");
+    expect(second.savedOnly).toBe(true);
+    expect(second.cards[0].id).toBe("base1-4");
+    expect(second.cards[0].image).toContain("assets.tcgdex.net");
+  });
+
+  it("asks TCGdex only after the primary goes quiet, and stops by 9s", async () => {
+    vi.useFakeTimers();
+    const started = Date.now();
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      calls.push(url);
+      if (url.includes("api.pokemontcg.io")) {
+        return new Promise<Response>((_resolve, reject) => {
+          const fail = () => reject(new DOMException("Aborted", "AbortError"));
+          if (init?.signal?.aborted) fail();
+          else init?.signal?.addEventListener("abort", fail);
+        });
+      }
+      return Promise.resolve(
+        jsonResponse([
+          {
+            id: "base2-8",
+            localId: "8",
+            name: "Pidgeot",
+            image: "https://assets.tcgdex.net/en/base/base2/8",
+          },
+        ]),
+      );
+    });
+
+    const pending = searchCards("Pidgeot");
+    await vi.advanceTimersByTimeAsync(PRIMARY_CATALOG_TIMEOUT_MS - 1);
+    expect(calls.some((url) => url.includes("api.tcgdex.net"))).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    const cards = await pending;
+    expect(cards[0]).toMatchObject({
+      id: "base2-8",
+      name: "Pidgeot",
+      number: "8",
+      setName: "Jungle",
+      image: "https://assets.tcgdex.net/en/base/base2/8/low.webp",
+    });
+    expect(calls.some((url) => url.includes("api.pokemontcg.io"))).toBe(true);
+    expect(Date.now() - started).toBe(PRIMARY_CATALOG_TIMEOUT_MS);
+  });
+
+  it("gives up on both catalogs at the 9s budget and shows on-phone cards", async () => {
+    vi.useFakeTimers();
+    const started = Date.now();
+    vi.stubGlobal("fetch", (_input: RequestInfo | URL, init?: RequestInit) => {
+      return new Promise<Response>((_resolve, reject) => {
+        const fail = () => reject(new DOMException("Aborted", "AbortError"));
+        if (init?.signal?.aborted) fail();
+        else init?.signal?.addEventListener("abort", fail);
+      });
+    });
+    let settled = false;
+    const pending = searchCardList("Pikachu").then((result) => {
+      settled = true;
+      return result;
+    });
+    await vi.advanceTimersByTimeAsync(CATALOG_BUDGET_MS - 1);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    const listed = await pending;
+    expect(settled).toBe(true);
+    expect(listed.savedOnly).toBe(true);
+    expect(listed.cards.some((card) => card.name === "Pikachu")).toBe(true);
+    expect(Date.now() - started).toBe(CATALOG_BUDGET_MS);
+  });
+
+  it("uses TCGdex for a scan when the primary lookup fails", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("api.pokemontcg.io")) return jsonResponse({ error: "boom" }, 500);
+      return jsonResponse([
+        {
+          id: "base2-8",
+          localId: "8",
+          name: "Pidgeot",
+          image: "https://assets.tcgdex.net/en/base/base2/8",
+        },
+        {
+          id: "jumbo-1",
+          localId: "1",
+          name: "Pidgeot",
+          image: "https://assets.tcgdex.net/en/jumbo/1",
+        },
+      ]);
+    }));
+    const cards = await findCardsFromScan("Pidgeot", "8");
+    expect(cards[0]).toMatchObject({ id: "base2-8", name: "Pidgeot", number: "8", setName: "Jungle" });
+    expect(cards.some((card) => card.id.startsWith("jumbo"))).toBe(false);
   });
 
   it("falls back to the local catalog when the API returns HTTP 500", async () => {

@@ -101,6 +101,7 @@ describe("CardSearchPanel", () => {
       await failed.promise.catch(() => undefined);
     });
     expect(node.textContent).toContain(SEARCH_UNAVAILABLE);
+    expect(node.querySelector(".status.error")?.getAttribute("role")).toBe("status");
     expect(node.textContent).not.toContain("Charizard");
     expect(node.textContent).not.toContain(SEARCH_SAVED_ONLY);
   });
@@ -117,7 +118,9 @@ describe("CardSearchPanel", () => {
       saved.resolve({ cards: [pikachu], savedOnly: true });
       await saved.promise;
     });
-    expect(node.textContent).toContain(SEARCH_SAVED_ONLY);
+    const notice = node.querySelector(".hint");
+    expect(notice?.textContent).toBe(SEARCH_SAVED_ONLY);
+    expect(notice?.getAttribute("role")).toBe("status");
     expect(node.textContent).toContain("Pikachu");
     expect(node.querySelector(".status.error")).toBeNull();
 

@@ -334,7 +334,7 @@ img {
 }
 
 .about {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .about-toggle {
@@ -379,7 +379,7 @@ img {
 
 .about .hint,
 .about .privacy-lines {
-  margin-bottom: 10px;
+  margin-bottom: 4px;
 }
 
 .fab-row {

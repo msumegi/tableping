@@ -62,6 +62,14 @@ export default defineConfig({
             },
           },
           {
+            urlPattern: /^https:\/\/api\.tcgdex\.net\/.*/i,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "tcgdex-api",
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
+            },
+          },
+          {
             urlPattern: /^https:\/\/assets\.tcgdex\.net\/.*/i,
             handler: "CacheFirst",
             options: {

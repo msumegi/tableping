@@ -79,8 +79,16 @@ export function CardSearchPanel({
         </div>
       ) : null}
       {busy ? <p className="status">Searching…</p> : null}
-      {err ? <p className="status error">{err}</p> : null}
-      {savedOnly && !err ? <p className="hint">{SEARCH_SAVED_ONLY}</p> : null}
+      {err ? (
+        <p className="status error" role="status">
+          {err}
+        </p>
+      ) : null}
+      {savedOnly && !err ? (
+        <p className="hint" role="status">
+          {SEARCH_SAVED_ONLY}
+        </p>
+      ) : null}
       <div className="card-grid">
         {results.map((card) => (
           <button

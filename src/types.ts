@@ -4,6 +4,8 @@ export type Card = {
   image: string;
   setName: string;
   number: string;
+  /** Present when the catalog sent one. Matching ignores it. */
+  rarity?: string;
 };
 
 export type Tab = "have" | "want" | "nearby" | "you";

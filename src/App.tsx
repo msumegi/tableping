@@ -63,6 +63,7 @@ import {
   HEAR_AGAIN,
   REPORT_PEER,
   MATCH_PRINTING,
+  CARD_DATA_CREDIT,
 } from "./lib/copy";
 import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
 import { kindLabel, matchAgainst, sourceLabel } from "./lib/match";
@@ -855,6 +856,7 @@ function YouPane({
           <p className="hint">{MATCH_PRINTING}</p>
           <p className="hint">A product of {COMPANY}.</p>
           <p className="hint">{PRIVACY_FAN}</p>
+          <p className="hint">{CARD_DATA_CREDIT}</p>
           <ul className="privacy-lines">
             <li>
               <a href={SITE_APP_PAGE}>About TableTrade</a>

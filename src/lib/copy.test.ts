@@ -34,6 +34,7 @@ import {
   PRIVACY_PING,
   SCAN_OFFLINE,
   SEARCH_SAVED_ONLY,
+  CARD_DATA_CREDIT,
   SITE_APP_PAGE,
   SITE_HOME,
   WANT_LEDE,
@@ -136,9 +137,10 @@ describe("join and first-run copy", () => {
     expect(PRIVACY_PING).toMatch(/ping/i);
     expect(PRIVACY_FAN).toBe("TableTrade is an unofficial fan tool.");
     expect(SCAN_OFFLINE).toBe("Card scanning needs internet. Go online, or type the name.");
-    expect(SEARCH_SAVED_ONLY).toBe(
-      "Showing saved cards. The full card list isn't reachable right now.",
-    );
+    expect(SEARCH_SAVED_ONLY).toBe("Showing cards on this phone. Full list is offline right now.");
+    expect(CARD_DATA_CREDIT).toBe("Card data from pokemontcg.io and TCGdex (MIT).");
+    expect(app).toContain("CARD_DATA_CREDIT");
+    expect(app).not.toContain("Showing cards on this phone");
   });
 
   it("points You at the company site", () => {

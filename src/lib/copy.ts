@@ -105,5 +105,6 @@ export const MATCH_PRINTING = "A match is the same card from the same set, not j
 
 export const SCAN_OFFLINE = "Card scanning needs internet. Go online, or type the name.";
 
-export const SEARCH_SAVED_ONLY =
-  "Showing saved cards. The full card list isn't reachable right now.";
+export const SEARCH_SAVED_ONLY = "Showing cards on this phone. Full list is offline right now.";
+
+export const CARD_DATA_CREDIT = "Card data from pokemontcg.io and TCGdex (MIT).";
