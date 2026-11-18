@@ -22,7 +22,7 @@ describe("player-facing name is TableTrade", () => {
     expect(parsed.name).toBe("TableTrade");
     expect(parsed.short_name).toBe("TableTrade");
     expect(parsed.description).toBe(
-      "Trade Pokémon cards easily. Keep a have-list and a want-list on your phone, then check in to find a match nearby.",
+      "Trade Pokémon cards with someone nearby. Keep a have-list and a want-list on your phone, then check in to find a match nearby.",
     );
     expect(parsed.description).not.toMatch(/here, now|close by/i);
     expect(manifest).not.toMatch(/TablePing/i);

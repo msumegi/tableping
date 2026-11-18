@@ -42,6 +42,11 @@ import {
   WANT_LEDE,
   YOU_LEDE,
   YOU_SHARED,
+  TAGLINE,
+  DISPLAY_NAME_LABEL,
+  DISPLAY_NAME_HINT,
+  CREATED_BY,
+  PUBLISHED_BY,
 } from "./copy";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -64,9 +69,7 @@ describe("join and first-run copy", () => {
   it("explains Have in plain language and names Check in", () => {
     const text = `${HAVE_FIRST_RUN_TITLE} ${HAVE_FIRST_RUN_BODY} ${HAVE_FIRST_RUN_PRIVACY}`;
     expect(HAVE_FIRST_RUN_TITLE).toBe("Get started.");
-    expect(HAVE_FIRST_RUN_BODY).toMatch(/press Check in/);
-    expect(HAVE_FIRST_RUN_BODY).toMatch(/both phones ping/);
-    expect(HAVE_FIRST_RUN_BODY).toMatch(/Then meet up and trade/);
+    expect(HAVE_FIRST_RUN_BODY).toBe("Add some cards you have to trade and some you want.");
     expect(HAVE_FIRST_RUN_PRIVACY).toBe("Your list is shared with nearby phones only when you check in.");
     expect(HAVE_FIRST_RUN_PRIVACY).not.toMatch(/encrypted|private|password/i);
     expect(text.split(/\s+/).length).toBeLessThan(80);
@@ -131,20 +134,33 @@ describe("join and first-run copy", () => {
     expect(HAVE_LEDE).toBe("Cards you want to trade away.");
     expect(WANT_LEDE).toBe("Cards you want.");
     expect(YOU_LEDE).toBe("Your lists stay on your phone. No account needed.");
-    expect(YOU_SHARED).toBe(
-      "When you check in, nearby traders get your name, how to find you, and your card lists.",
-    );
+    expect(YOU_SHARED).toBe("Nearby players see your display name and your card lists.");
+    expect(TAGLINE).toBe("Trade Pokémon cards with someone nearby.");
+    expect(DISPLAY_NAME_LABEL).toBe("Display name");
+    expect(DISPLAY_NAME_HINT).toBe("Optional. So nearby players can find you.");
+    expect(app).toContain("DISPLAY_NAME_LABEL");
+    expect(app).toContain("DISPLAY_NAME_HINT");
+    expect(app).toContain("{TAGLINE}");
     expect(YOU_SHARED).not.toMatch(/Nothing else/);
     expect(PRIVACY_LISTS).toMatch(/until you check in/);
     expect(PRIVACY_PING).toMatch(/ping/i);
     expect(PRIVACY_FAN).toBe("TableTrade is an unofficial fan tool.");
     expect(SCAN_OFFLINE).toBe("Card scanning needs internet. Go online, or type the name.");
     expect(SEARCH_SAVED_ONLY).toBe("Showing cards on this phone. Full list is offline right now.");
-    expect(CARD_DATA_CREDIT).toBe("Card data from pokemontcg.io, and from TCGdex (MIT licence)");
-    expect(TCGDEX_LICENSE_LABEL).toBe("MIT licence");
+    expect(CARD_DATA_CREDIT).toBe("Card data from pokemontcg.io and TCGdex (MIT licence)");
+    expect(TCGDEX_LICENSE_LABEL).toBe("licence");
+    expect(CARD_DATA_CREDIT).toContain(`MIT ${TCGDEX_LICENSE_LABEL}`);
     expect(TCGDEX_LICENSE).toBe("https://github.com/tcgdex/cards-database/blob/master/LICENSE");
+    expect(CREATED_BY).toBe("Created by Matthew Sumegi");
+    expect(PUBLISHED_BY).toBe("Published by Range Road Tech");
+    expect(app).toContain("{CREATED_BY}");
+    expect(app).toContain("<a href={SITE_HOME}>{PUBLISHED_BY}</a>");
+    expect(app).not.toContain("A product of");
     expect(app).toContain("TCGDEX_LICENSE");
-    expect(app).toContain("<a href={TCGDEX_LICENSE}>{TCGDEX_LICENSE_LABEL}</a>");
+    expect(app).toContain('<a className="licence" href={TCGDEX_LICENSE}>{TCGDEX_LICENSE_LABEL}</a>');
+    const css = readFileSync(join(root, "src/index.css"), "utf8");
+    expect(css).toMatch(/a\.licence[\s\S]*white-space:\s*nowrap/);
+    expect(css).toMatch(/a\.licence[\s\S]*padding:\s*13px 8px/);
     expect(app).not.toContain("Showing cards on this phone");
   });
 
@@ -155,10 +171,9 @@ describe("join and first-run copy", () => {
     expect(SITE_APP_PAGE).toContain("rangeroadtech.com/apps/tabletrade");
     expect(app).toContain("SITE_HOME");
     expect(app).toContain("HELP_MAIL");
-    expect(app).toContain("A product of {COMPANY}.");
+    expect(app).toContain("{PUBLISHED_BY}");
     expect(app).not.toContain("BUILT_BY");
     expect(copySrc).not.toContain("BUILT_BY");
-    expect(copySrc).not.toMatch(/Matthew|Sumegi/);
   });
 
   it("keeps player-facing copy free of Tinder and we-don’t-do lists", () => {

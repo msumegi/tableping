@@ -44,10 +44,14 @@ import {
   SITE_HOME,
   SITE_PRIVACY,
   HELP_MAIL,
-  COMPANY,
   WANT_LEDE,
   YOU_LEDE,
   YOU_SHARED,
+  TAGLINE,
+  DISPLAY_NAME_LABEL,
+  DISPLAY_NAME_HINT,
+  CREATED_BY,
+  PUBLISHED_BY,
   AGE_TITLE,
   AGE_BODY,
   AGE_YES,
@@ -475,7 +479,7 @@ export default function App() {
           <h1 className="brand" aria-label="TableTrade">
             Table<span>Trade</span>
           </h1>
-          <p className="tag">Trade Pokémon cards easily.</p>
+          <p className="tag">{TAGLINE}</p>
         </div>
         {activePing ? <span className="pill ok">Ping</span> : <span className="pill">{settings.displayName}</span>}
       </header>
@@ -787,7 +791,7 @@ function YouPane({
       <p className="lede">{YOU_LEDE}</p>
       <div className="you-card stack">
         <label className="hint" htmlFor="name">
-          Display name
+          {DISPLAY_NAME_LABEL}
         </label>
         <input
           id="name"
@@ -796,6 +800,7 @@ function YouPane({
           value={settings.displayName}
           onChange={(e) => onName(e.target.value)}
         />
+        <p className="hint">{DISPLAY_NAME_HINT}</p>
         <label className="hint" htmlFor="you-here-note">
           {HERE_NOTE_LABEL}
         </label>
@@ -856,12 +861,12 @@ function YouPane({
           <span className="about-chevron" aria-hidden="true" />
         </button>
         <div id="about-panel" hidden={!aboutOpen} ref={aboutPanelRef}>
+          <p className="hint">{CREATED_BY}</p>
           <p className="hint">{MATCH_PRINTING}</p>
-          <p className="hint">A product of {COMPANY}.</p>
           <p className="hint">{PRIVACY_FAN}</p>
           <p className="hint">
             {CARD_DATA_CREDIT_BEFORE}
-            <a href={TCGDEX_LICENSE}>{TCGDEX_LICENSE_LABEL}</a>
+            <a className="licence" href={TCGDEX_LICENSE}>{TCGDEX_LICENSE_LABEL}</a>
             {CARD_DATA_CREDIT_AFTER}
           </p>
           <ul className="privacy-lines">
@@ -869,7 +874,7 @@ function YouPane({
               <a href={SITE_APP_PAGE}>About TableTrade</a>
             </li>
             <li>
-              <a href={SITE_HOME}>{COMPANY}</a>
+              <a href={SITE_HOME}>{PUBLISHED_BY}</a>
             </li>
             <li>
               <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>

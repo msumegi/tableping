@@ -12,13 +12,21 @@ export const NEARBY_LEDE =
 
 export const YOU_LEDE = "Your lists stay on your phone. No account needed.";
 
-export const YOU_SHARED =
-  "When you check in, nearby traders get your name, how to find you, and your card lists.";
+export const YOU_SHARED = "Nearby players see your display name and your card lists.";
+
+export const TAGLINE = "Trade Pokémon cards with someone nearby.";
+
+export const DISPLAY_NAME_LABEL = "Display name";
+
+export const DISPLAY_NAME_HINT = "Optional. So nearby players can find you.";
+
+export const CREATED_BY = "Created by Matthew Sumegi";
+
+export const PUBLISHED_BY = "Published by Range Road Tech";
 
 export const HAVE_FIRST_RUN_TITLE = "Get started.";
 
-export const HAVE_FIRST_RUN_BODY =
-  "Add a few cards you want to trade away and cards you want. At a shop or event, go to Nearby and press Check in. If your lists match someone nearby, both phones ping. Then meet up and trade.";
+export const HAVE_FIRST_RUN_BODY = "Add some cards you have to trade and some you want.";
 
 export const HAVE_FIRST_RUN_PRIVACY = "Your list is shared with nearby phones only when you check in.";
 
@@ -107,9 +115,9 @@ export const SCAN_OFFLINE = "Card scanning needs internet. Go online, or type th
 
 export const SEARCH_SAVED_ONLY = "Showing cards on this phone. Full list is offline right now.";
 
-export const TCGDEX_LICENSE_LABEL = "MIT licence";
+export const TCGDEX_LICENSE_LABEL = "licence";
 
-export const CARD_DATA_CREDIT_BEFORE = "Card data from pokemontcg.io, and from TCGdex (";
+export const CARD_DATA_CREDIT_BEFORE = "Card data from pokemontcg.io and TCGdex (MIT ";
 
 export const CARD_DATA_CREDIT_AFTER = ")";
 

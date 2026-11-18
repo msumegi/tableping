@@ -14,7 +14,7 @@ Pokémon only. No Magic. No One Piece.
 
 Built for **Matthew** to try on an Android phone.
 
-Share **TableTrade**: **[tableping/welcome](https://msumegi.github.io/tableping/welcome/)** — *Trade Pokémon cards easily.* Static marketing page. The live app stays at the site root (`/tableping/`).
+Share **TableTrade**: **[tableping/welcome](https://msumegi.github.io/tableping/welcome/)** — *Trade Pokémon cards with someone nearby.* Static marketing page. The live app stays at the site root (`/tableping/`).
 
 ---
 

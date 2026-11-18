@@ -21,7 +21,7 @@ describe("marketing landing page is a static public file", () => {
     expect(html).toMatch(/<title>[^<]*TableTrade/);
     expect(html).toMatch(/<h1>\s*TableTrade\s*<\/h1>/);
     expect(html).toContain("TableTrade");
-    expect(html).toContain("Trade Pokémon cards easily.");
+    expect(html).toContain("Trade Pokémon cards with someone nearby.");
     expect(html).not.toMatch(/Trade here, now/);
     expect(html).not.toMatch(/TablePing/);
     expect(html).not.toMatch(/NowTrade/);
