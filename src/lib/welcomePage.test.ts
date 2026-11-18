@@ -27,7 +27,10 @@ describe("marketing landing page is a static public file", () => {
     expect(html).not.toMatch(/NowTrade/);
     expect(html).not.toMatch(/tonight/i);
     expect(html).toContain("Range Road Technologies");
-    expect(html).toContain("A product of");
+    expect(html).toContain("Published by Range Road Tech");
+    expect(html).toContain('<a href="https://rangeroadtech.com/">Published by Range Road Tech</a>');
+    expect(html).toContain('<a href="https://rangeroadtech.com/">Range Road Tech</a>');
+    expect(html).not.toContain("A product of");
     expect(html).not.toMatch(/Built by/);
     expect(html).not.toMatch(/Matthew|Sumegi/);
     expect(html).toContain("https://msumegi.github.io/tableping/");

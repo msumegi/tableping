@@ -341,6 +341,10 @@ h1 {
   line-height: 1.15;
 }
 
+.studio-name a {
+  color: inherit;
+}
+
 .studio-lead {
   color: var(--lamp);
 }
