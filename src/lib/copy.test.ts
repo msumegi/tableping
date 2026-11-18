@@ -134,7 +134,7 @@ describe("join and first-run copy", () => {
     expect(HAVE_LEDE).toBe("Cards you want to trade away.");
     expect(WANT_LEDE).toBe("Cards you want.");
     expect(YOU_LEDE).toBe("Your lists stay on your phone. No account needed.");
-    expect(YOU_SHARED).toBe("Nearby players see your display name and your card lists.");
+    expect(YOU_SHARED).toBe("Nearby players see your display name, your note and your card lists.");
     expect(TAGLINE).toBe("Trade Pokémon cards with someone nearby.");
     expect(DISPLAY_NAME_LABEL).toBe("Display name");
     expect(DISPLAY_NAME_HINT).toBe("Optional. So nearby players can find you.");
@@ -152,7 +152,7 @@ describe("join and first-run copy", () => {
     expect(CARD_DATA_CREDIT).toContain(`MIT ${TCGDEX_LICENSE_LABEL}`);
     expect(TCGDEX_LICENSE).toBe("https://github.com/tcgdex/cards-database/blob/master/LICENSE");
     expect(CREATED_BY).toBe("Created by Matthew Sumegi");
-    expect(PUBLISHED_BY).toBe("Published by Range Road Tech");
+    expect(PUBLISHED_BY).toBe("Published by Range Road Technologies");
     expect(app).toContain("{CREATED_BY}");
     expect(app).toContain("<a href={SITE_HOME}>{PUBLISHED_BY}</a>");
     expect(app).not.toContain("A product of");

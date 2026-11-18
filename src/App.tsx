@@ -874,13 +874,13 @@ function YouPane({
               <a href={SITE_APP_PAGE}>About TableTrade</a>
             </li>
             <li>
-              <a href={SITE_HOME}>{PUBLISHED_BY}</a>
-            </li>
-            <li>
               <a href={`mailto:${HELP_MAIL}`}>{HELP_MAIL}</a>
             </li>
             <li>
               <a href={SITE_PRIVACY}>Privacy</a>
+            </li>
+            <li>
+              <a href={SITE_HOME}>{PUBLISHED_BY}</a>
             </li>
           </ul>
         </div>

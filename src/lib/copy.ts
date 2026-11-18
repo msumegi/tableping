@@ -12,7 +12,7 @@ export const NEARBY_LEDE =
 
 export const YOU_LEDE = "Your lists stay on your phone. No account needed.";
 
-export const YOU_SHARED = "Nearby players see your display name and your card lists.";
+export const YOU_SHARED = "Nearby players see your display name, your note and your card lists.";
 
 export const TAGLINE = "Trade Pokémon cards with someone nearby.";
 
@@ -22,7 +22,7 @@ export const DISPLAY_NAME_HINT = "Optional. So nearby players can find you.";
 
 export const CREATED_BY = "Created by Matthew Sumegi";
 
-export const PUBLISHED_BY = "Published by Range Road Tech";
+export const PUBLISHED_BY = "Published by Range Road Technologies";
 
 export const HAVE_FIRST_RUN_TITLE = "Get started.";
 
