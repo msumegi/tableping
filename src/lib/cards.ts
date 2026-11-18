@@ -2,13 +2,22 @@ import type { Card } from "../types";
 import { LOCAL_CARDS } from "./localCatalog";
 import { POKEMON_SPECIES } from "./pokemonNames";
 import { normalizeName, rankByCollectorNumber } from "./scanMatch";
+import { searchTcgdexByName } from "./tcgdex";
 
 const POKEMON_TCG = "https://api.pokemontcg.io/v2";
 const SEARCH_TIMEOUT_MS = 8000;
+/**
+ * A dead pokemontcg.io gets this long, then TCGdex uses whatever is left of
+ * CATALOG_BUDGET_MS. Worst case stays at today's 8s timeout plus about 1s.
+ */
+export const PRIMARY_CATALOG_TIMEOUT_MS = 3500;
+export const CATALOG_BUDGET_MS = SEARCH_TIMEOUT_MS + 1000;
 
 /** Shown when the live catalog is down and the name is not in the local list. */
 export const SEARCH_UNAVAILABLE =
   "Can't reach the card list right now. Try a well-known name like Pikachu, or check your connection.";
+
+export type CardSearchResult = { cards: Card[]; savedOnly: boolean };
 
 const CATALOG_CACHE = "tableping.catalogCache.v1";
 
@@ -143,6 +152,35 @@ async function fetchWithTimeout(url: string, timeoutMs = SEARCH_TIMEOUT_MS): Pro
   }
 }
 
+function startBudget(): { started: number } {
+  return { started: Date.now() };
+}
+
+function budgetLeft(budget: { started: number }): number {
+  return Math.max(0, CATALOG_BUDGET_MS - (Date.now() - budget.started));
+}
+
+/** Primary first. TCGdex runs only after an error, a non-2xx, or a timeout. */
+async function primaryThenTcgdex(
+  budget: { started: number },
+  primary: (timeoutMs: number) => Promise<Card[]>,
+  backupName: string,
+  number?: string,
+): Promise<Card[]> {
+  const primaryMs = Math.min(PRIMARY_CATALOG_TIMEOUT_MS, budgetLeft(budget));
+  try {
+    if (primaryMs < 200) throw new Error("catalog budget");
+    return await primary(primaryMs);
+  } catch {
+    const left = budgetLeft(budget);
+    if (left < 200) throw new Error("catalog budget");
+    const cards = await searchTcgdexByName(backupName, left);
+    if (!number) return cards;
+    const wanted = /^\d+$/.test(number) ? String(parseInt(number, 10)) : number;
+    return cards.filter((card) => card.number.toLowerCase() === wanted.toLowerCase());
+  }
+}
+
 function dedupeCards(cards: Card[]): Card[] {
   const seen = new Set<string>();
   const out: Card[] = [];
@@ -161,12 +199,12 @@ export function searchLocalCatalog(query: string): Card[] {
   return rankSearchResults(query, dedupeCards(hits)).slice(0, 36);
 }
 
-async function searchPokemonTcgLucene(lucene: string): Promise<Card[]> {
+async function searchPokemonTcgLucene(lucene: string, timeoutMs = SEARCH_TIMEOUT_MS): Promise<Card[]> {
   const params = new URLSearchParams({
     q: lucene,
     pageSize: "40",
   });
-  const res = await fetchWithTimeout(`${POKEMON_TCG}/cards?${params}`);
+  const res = await fetchWithTimeout(`${POKEMON_TCG}/cards?${params}`, timeoutMs);
   if (!res.ok) {
     throw new Error(`Card search failed (${res.status})`);
   }
@@ -177,26 +215,33 @@ async function searchPokemonTcgLucene(lucene: string): Promise<Card[]> {
   return dedupeCards(body.data.map(fromPtcg).filter((card): card is Card => card !== null));
 }
 
-async function searchPokemonTcgApi(query: string): Promise<Card[]> {
-  return searchPokemonTcgLucene(luceneCatalogQuery(query));
+async function searchPokemonTcgApi(query: string, timeoutMs = SEARCH_TIMEOUT_MS): Promise<Card[]> {
+  return searchPokemonTcgLucene(luceneCatalogQuery(query), timeoutMs);
 }
 
 /** Match a camera read to printings. Number is used when OCR saw 58/102 (etc). */
 export async function findCardsFromScan(name: string, number?: string): Promise<Card[]> {
   const q = name.trim();
   if (q.length < 2) return [];
+  const budget = startBudget();
+  const wanted = number?.trim();
 
   try {
-    if (number) {
-      const num = /^\d+$/.test(number.trim()) ? String(parseInt(number.trim(), 10)) : number.trim();
+    if (wanted) {
+      const num = /^\d+$/.test(wanted) ? String(parseInt(wanted, 10)) : wanted;
       try {
-        const precise = await searchPokemonTcgLucene(`${luceneNameQuery(q)} number:${num}`);
+        const precise = await primaryThenTcgdex(
+          budget,
+          (ms) => searchPokemonTcgLucene(`${luceneNameQuery(q)} number:${num}`, ms),
+          q,
+          num,
+        );
         if (precise.length) return rankByCollectorNumber(rankSearchResults(q, precise), number).slice(0, 12);
       } catch {
         /* name-only next */
       }
     }
-    const byName = await searchPokemonTcgApi(q);
+    const byName = await primaryThenTcgdex(budget, (ms) => searchPokemonTcgApi(q, ms), q);
     if (byName.length) return rankByCollectorNumber(rankSearchResults(q, byName), number).slice(0, 12);
     return rankByCollectorNumber(searchLocalCatalog(q), number).slice(0, 12);
   } catch {
@@ -207,34 +252,44 @@ export async function findCardsFromScan(name: string, number?: string): Promise<
 }
 
 export async function searchCards(query: string): Promise<Card[]> {
+  return (await searchCardList(query)).cards;
+}
+
+export async function searchCardList(query: string): Promise<CardSearchResult> {
   const q = query.trim();
-  if (q.length < 2) return [];
+  if (q.length < 2) return { cards: [], savedOnly: false };
   const parsed = parseCatalogQuery(q);
   const local = searchLocalCatalog(q);
   const cached = cachedCards(q);
+  const budget = startBudget();
+  const backupName = parsed.name || q;
 
   try {
-    const remote = await searchPokemonTcgApi(q);
+    const remote = await primaryThenTcgdex(budget, (ms) => searchPokemonTcgApi(q, ms), backupName);
     const matched = remote.filter((card) => cardMatchesQuery(card, q));
     if (matched.length) {
       const ranked = rankSearchResults(q, matched).slice(0, 36);
       rememberCards(q, ranked);
-      return ranked;
+      return { cards: ranked, savedOnly: false };
     }
     if (parsed.set) {
-      const byName = await searchPokemonTcgLucene(luceneNameQuery(parsed.name));
+      const byName = await primaryThenTcgdex(
+        budget,
+        (ms) => searchPokemonTcgLucene(luceneNameQuery(parsed.name), ms),
+        parsed.name,
+      );
       const setHits = byName.filter((card) => cardMatchesQuery(card, q));
       if (setHits.length) {
         const ranked = rankSearchResults(q, setHits).slice(0, 36);
         rememberCards(q, ranked);
-        return ranked;
+        return { cards: ranked, savedOnly: false };
       }
     }
-    if (cached.length) return cached;
-    return local;
+    if (cached.length) return { cards: cached, savedOnly: false };
+    return { cards: local, savedOnly: false };
   } catch {
-    if (cached.length) return cached;
-    if (local.length) return local;
+    if (cached.length) return { cards: cached, savedOnly: true };
+    if (local.length) return { cards: local, savedOnly: true };
     throw new Error(SEARCH_UNAVAILABLE);
   }
 }

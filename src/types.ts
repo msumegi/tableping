@@ -4,6 +4,8 @@ export type Card = {
   image: string;
   setName: string;
   number: string;
+  /** Present when the catalog sent one. Matching ignores it. */
+  rarity?: string;
 };
 
 export type Tab = "have" | "want" | "nearby" | "you";
@@ -17,7 +19,6 @@ export type Presence = {
   name: string;
   have: Card[];
   want: Card[];
-  photo?: string;
   note?: string;
   geohash?: string;
   lat?: number;
@@ -44,7 +45,6 @@ export type Settings = {
   userId: string;
   demoMode: boolean;
   tableCode: string;
-  photo?: string;
   lastShopId?: string;
   lookingNote?: string;
   ageOk?: boolean;

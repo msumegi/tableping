@@ -1,3 +1,67 @@
+@font-face {
+  font-family: Outfit;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../fonts/outfit-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: Outfit;
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/outfit-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: Outfit;
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/outfit-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: Outfit;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/outfit-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: Fraunces;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/fraunces-700.woff2") format("woff2");
+}
+@font-face {
+  font-family: Fraunces;
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/fraunces-500-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: Fraunces;
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../fonts/fraunces-700-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../fonts/plex-mono-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../fonts/plex-mono-600.woff2") format("woff2");
+}
+
 :root {
   --night: #0c1612;
   --felt: #143326;
@@ -8,6 +72,8 @@
   --paper-2: #d9ccb0;
   --ember: #ff6b35;
   --ember-ink: #2a1008;
+  --btn-primary: #e85a24;
+  --btn-primary-pressed: #cf4d1c;
   --electric: #f5d76e;
   --ok: #8fd6a8;
   --muted: #b7a88e;
@@ -36,6 +102,7 @@ body {
 }
 
 body {
+  min-height: 100vh;
   min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
@@ -64,6 +131,10 @@ a {
 .lamp {
   pointer-events: none;
   position: absolute;
+  top: -12%;
+  right: -20%;
+  left: -20%;
+  bottom: auto;
   inset: -12% -20% auto;
   height: 54vh;
   background:
@@ -74,6 +145,10 @@ a {
 .felt-grain {
   pointer-events: none;
   position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   opacity: 0.09;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -209,17 +284,24 @@ h1 {
   min-height: 54px;
   padding: 0 22px;
   border-radius: 16px;
-  background: var(--ember);
-  color: var(--ember-ink);
+  background: var(--btn-primary);
+  color: #ffffff;
   text-decoration: none;
   font-weight: 700;
-  font-size: 1.05rem;
-  box-shadow: 0 12px 28px rgba(255, 107, 53, 0.28);
+  font-size: 19px;
+  box-shadow: 0 12px 28px rgba(232, 90, 36, 0.28);
 }
 
-.cta:hover,
+.cta:hover {
+  background: var(--btn-primary);
+}
+
+.cta:active {
+  background: var(--btn-primary-pressed);
+}
+
 .cta:focus-visible {
-  background: #ff8355;
+  background: var(--btn-primary);
 }
 
 .cta-note {
@@ -259,6 +341,10 @@ h1 {
   line-height: 1.15;
 }
 
+.studio-name a {
+  color: inherit;
+}
+
 .studio-lead {
   color: var(--lamp);
 }
@@ -281,6 +367,10 @@ h1 {
 .table-art::before {
   content: "";
   position: absolute;
+  top: 18px;
+  right: 18px;
+  bottom: 18px;
+  left: 18px;
   inset: 18px;
   border-radius: 999px;
   border: 2px solid rgba(245, 215, 110, 0.12);
@@ -495,9 +585,15 @@ h1 {
 }
 
 @keyframes ping {
-  0% { opacity: 0.55; scale: 0.72; }
-  70% { opacity: 0; scale: 1.15; }
-  100% { opacity: 0; scale: 1.15; }
+  0% { opacity: 0.55; transform: scale(0.72); }
+  70% { opacity: 0; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+
+@supports not (inset: 0) {
+  .top > * + * {
+    margin-left: 16px;
+  }
 }
 
 @media (min-width: 760px) {

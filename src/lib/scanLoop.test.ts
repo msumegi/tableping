@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SAMPLE_CHARIZARD, SAMPLE_PIKACHU, searchLocalCatalog } from "./cards";
+import { SCAN_OFFLINE } from "./copy";
 import { cameraDeniedMessage, initialScanState, scanReducer } from "./scanLoop";
 import { decideScanMatch, parseCardOcr } from "./scanMatch";
 
@@ -69,6 +70,13 @@ describe("scan loop reducer", () => {
     state = scanReducer(state, { type: "showTypeahead" });
     expect(state.typeaheadOpen).toBe(true);
     expect(state.phase).toBe("live");
+  });
+
+  it("tells you to go online or type the name when scanning has no internet", () => {
+    const state = scanReducer(initialScanState, { type: "ocrUnavailable" });
+    expect(state.phase).toBe("ocrfail");
+    expect(state.typeaheadOpen).toBe(true);
+    expect(state.notice).toBe(SCAN_OFFLINE);
   });
 
   it("permission denied says so in plain language and opens type-ahead", () => {

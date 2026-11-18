@@ -21,7 +21,10 @@ describe("player-facing name is TableTrade", () => {
     const parsed = JSON.parse(manifest) as { name: string; short_name: string; description: string };
     expect(parsed.name).toBe("TableTrade");
     expect(parsed.short_name).toBe("TableTrade");
-    expect(parsed.description).toMatch(/TableTrade|Pokémon trades here/i);
+    expect(parsed.description).toBe(
+      "Trade Pokémon cards with someone nearby. Keep a have-list and a want-list on your phone, then check in to find a match nearby.",
+    );
+    expect(parsed.description).not.toMatch(/here, now|close by/i);
     expect(manifest).not.toMatch(/TablePing/i);
 
     expect(app).toContain("TableTrade");

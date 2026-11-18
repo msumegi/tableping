@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { CardImage } from "./CardImage";
 import { CardSearchPanel } from "./CardSearch";
 import { findCardsFromScan, hydrateSetName } from "./lib/cards";
 import { cameraDeniedMessage, initialScanState, scanReducer } from "./lib/scanLoop";
@@ -151,7 +152,7 @@ export function CardScanLoop({
     <div className="scan-loop">
       <div className="grab" />
       <h2 className="panel-title">Scan to {listLabel}</h2>
-      <p className="lede">One card. Confirm, then flip.</p>
+      <p className="lede">Point at one card, confirm it, then flip to the next.</p>
       {showCamera ? (
         <div className={`scan-video-wrap${state.phase === "confirm" || state.phase === "pick" || state.typeaheadOpen ? " compact" : ""}`}>
           <video ref={videoRef} playsInline muted autoPlay />
@@ -175,7 +176,7 @@ export function CardScanLoop({
 
       {state.phase === "confirm" && state.chosen ? (
         <div className="scan-confirm">
-          <img src={state.chosen.image} alt={state.chosen.name} />
+          <CardImage src={state.chosen.image} name={state.chosen.name} />
           <div>
             <div className="name">{state.chosen.name}</div>
             <div className="meta">
@@ -197,7 +198,7 @@ export function CardScanLoop({
         <div className="card-grid">
           {state.candidates.map((card) => (
             <button key={card.id} className="card-tile" onClick={() => void addCard(card)}>
-              <img src={card.image} alt={card.name} />
+              <CardImage src={card.image} name={card.name} />
               <figcaption>
                 <div className="name">{card.name}</div>
                 <div className="meta">

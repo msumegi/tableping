@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" fill="none">
+  <rect width="108" height="108" fill="#12100e"/>
+  <g id="mark">
+    <circle class="ring ring-outer" cx="54" cy="54" r="31.875" stroke="#f5d76e" stroke-width="2.05"/>
+    <circle class="ring ring-inner" cx="54" cy="54" r="28.675" stroke="#ff6b35" stroke-width="2.05"/>
+    <g transform="translate(54 54)">
+      <g transform="translate(-7.2 -1.4) rotate(-12)">
+        <rect x="-11.5" y="-15.3" width="23" height="30.6" rx="3.4" fill="#ff6b35" stroke="#12100e" stroke-width="2.45"/>
+        <circle cx="0" cy="0.2" r="4.75" fill="#f3ead8"/>
+      </g>
+      <g transform="translate(7 1.6) rotate(11)">
+        <rect x="-11.5" y="-15.3" width="23" height="30.6" rx="3.4" fill="#f3ead8" stroke="#12100e" stroke-width="2.45"/>
+        <circle cx="0" cy="0.2" r="4.9" fill="#ff6b35"/>
+      </g>
+    </g>
+  </g>
+</svg>
