@@ -809,6 +809,26 @@ img {
   text-align: center;
 }
 
+@media (max-height: 600px) {
+  .ping-sheet .sheet {
+    padding: 6px 16px calc(8px + env(safe-area-inset-bottom));
+  }
+
+  .ping-sheet .grab {
+    margin-bottom: 6px;
+  }
+
+  .ping-sheet .ping-title {
+    margin: 4px 0 2px;
+  }
+
+  .ping-sheet .avatar.lg {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 4px;
+  }
+}
+
 .ping-kicker {
   color: var(--ember);
   font-weight: 700;
@@ -872,10 +892,6 @@ img {
   aspect-ratio: 3 / 4;
   object-fit: cover;
   display: block;
-}
-
-.video-wrap video.mirror {
-  transform: scaleX(-1);
 }
 
 .scan-loop {
