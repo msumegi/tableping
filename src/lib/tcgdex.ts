@@ -1,18 +1,21 @@
 import type { Card } from "../types";
 import setMap from "./tcgdexSetMap.json";
+import { collectorNumber, ptcgIdForTcgdexCard } from "./tcgdexId.mjs";
+
+export { collectorNumber, ptcgIdForTcgdexCard };
 
 /**
  * English TCGdex set id → pokemontcg.io set id and set name.
  * Built from both catalogs' set lists (normalized name plus card count).
  * Pokémon Futsal matches on that unique word plus an equal 5-card count.
- * 177 of 221 English TCGdex sets match. The other 44, including Pokémon TCG
- * Pocket and most trainer kits, are left out so a card never gets an id that
- * would miss on another phone.
+ * 176 of 221 English TCGdex sets match. The other 45, including 30th-c,
+ * Pokémon TCG Pocket, and most trainer kits, are left out so a card never
+ * gets an id that would miss or collide on another phone.
  */
 export const TCGDEX_SET_MAP: Record<string, { ptcg: string; name: string }> = setMap;
 
 export const TCGDEX_ENGLISH_SETS = 221;
-export const TCGDEX_MAPPED_SETS = 177;
+export const TCGDEX_MAPPED_SETS = 176;
 
 export const TCGDEX_API_ORIGIN = "https://api.tcgdex.net";
 export const TCGDEX_ASSET_ORIGIN = "https://assets.tcgdex.net";
@@ -25,12 +28,6 @@ const TCGDEX_CARDS = `${TCGDEX_API_ORIGIN}/v2/en/cards`;
  */
 export function tcgdexThumbUrl(imageBase: string): string {
   return `${imageBase.replace(/\/+$/, "")}/low.webp`;
-}
-
-/** Purely numeric collector numbers drop leading zeros. Promo text such as SWSH050 stays. */
-export function collectorNumber(localId: string): string {
-  if (/^\d+$/.test(localId)) return String(parseInt(localId, 10));
-  return localId;
 }
 
 export function fromTcgdexBrief(raw: unknown): Card | null {
@@ -53,9 +50,10 @@ export function fromTcgdexBrief(raw: unknown): Card | null {
   const mapped = TCGDEX_SET_MAP[tcgdexSetId];
   if (!mapped) return null;
   const number = collectorNumber(row.localId);
-  if (!number) return null;
+  const id = ptcgIdForTcgdexCard(mapped.ptcg, row.localId);
+  if (!number || !id) return null;
   const card: Card = {
-    id: `${mapped.ptcg}-${number}`,
+    id,
     name,
     image: tcgdexThumbUrl(image),
     setName: mapped.name,

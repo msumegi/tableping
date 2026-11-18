@@ -329,7 +329,8 @@ img {
   margin-top: 6px;
 }
 
-.privacy-lines a {
+.privacy-lines a,
+.about .hint a {
   color: var(--lamp, #f6cf96);
 }
 
@@ -379,7 +380,11 @@ img {
 
 .about .hint,
 .about .privacy-lines {
-  margin-bottom: 4px;
+  margin-bottom: 0;
+}
+
+.about .privacy-lines li + li {
+  margin-top: 2px;
 }
 
 .fab-row {

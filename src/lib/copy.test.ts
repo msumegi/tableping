@@ -35,6 +35,8 @@ import {
   SCAN_OFFLINE,
   SEARCH_SAVED_ONLY,
   CARD_DATA_CREDIT,
+  TCGDEX_LICENSE,
+  TCGDEX_LICENSE_LABEL,
   SITE_APP_PAGE,
   SITE_HOME,
   WANT_LEDE,
@@ -138,8 +140,11 @@ describe("join and first-run copy", () => {
     expect(PRIVACY_FAN).toBe("TableTrade is an unofficial fan tool.");
     expect(SCAN_OFFLINE).toBe("Card scanning needs internet. Go online, or type the name.");
     expect(SEARCH_SAVED_ONLY).toBe("Showing cards on this phone. Full list is offline right now.");
-    expect(CARD_DATA_CREDIT).toBe("Card data from pokemontcg.io and TCGdex (MIT).");
-    expect(app).toContain("CARD_DATA_CREDIT");
+    expect(CARD_DATA_CREDIT).toBe("Card data from pokemontcg.io, and from TCGdex (MIT licence)");
+    expect(TCGDEX_LICENSE_LABEL).toBe("MIT licence");
+    expect(TCGDEX_LICENSE).toBe("https://github.com/tcgdex/cards-database/blob/master/LICENSE");
+    expect(app).toContain("TCGDEX_LICENSE");
+    expect(app).toContain("<a href={TCGDEX_LICENSE}>{TCGDEX_LICENSE_LABEL}</a>");
     expect(app).not.toContain("Showing cards on this phone");
   });
 

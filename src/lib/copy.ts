@@ -107,4 +107,12 @@ export const SCAN_OFFLINE = "Card scanning needs internet. Go online, or type th
 
 export const SEARCH_SAVED_ONLY = "Showing cards on this phone. Full list is offline right now.";
 
-export const CARD_DATA_CREDIT = "Card data from pokemontcg.io and TCGdex (MIT).";
+export const TCGDEX_LICENSE_LABEL = "MIT licence";
+
+export const CARD_DATA_CREDIT_BEFORE = "Card data from pokemontcg.io, and from TCGdex (";
+
+export const CARD_DATA_CREDIT_AFTER = ")";
+
+export const CARD_DATA_CREDIT = `${CARD_DATA_CREDIT_BEFORE}${TCGDEX_LICENSE_LABEL}${CARD_DATA_CREDIT_AFTER}`;
+
+export const TCGDEX_LICENSE = "https://github.com/tcgdex/cards-database/blob/master/LICENSE";

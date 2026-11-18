@@ -63,7 +63,10 @@ import {
   HEAR_AGAIN,
   REPORT_PEER,
   MATCH_PRINTING,
-  CARD_DATA_CREDIT,
+  CARD_DATA_CREDIT_AFTER,
+  CARD_DATA_CREDIT_BEFORE,
+  TCGDEX_LICENSE,
+  TCGDEX_LICENSE_LABEL,
 } from "./lib/copy";
 import { complementaryDemoPresence, seedListsIfEmpty } from "./lib/demo";
 import { kindLabel, matchAgainst, sourceLabel } from "./lib/match";
@@ -856,7 +859,11 @@ function YouPane({
           <p className="hint">{MATCH_PRINTING}</p>
           <p className="hint">A product of {COMPANY}.</p>
           <p className="hint">{PRIVACY_FAN}</p>
-          <p className="hint">{CARD_DATA_CREDIT}</p>
+          <p className="hint">
+            {CARD_DATA_CREDIT_BEFORE}
+            <a href={TCGDEX_LICENSE}>{TCGDEX_LICENSE_LABEL}</a>
+            {CARD_DATA_CREDIT_AFTER}
+          </p>
           <ul className="privacy-lines">
             <li>
               <a href={SITE_APP_PAGE}>About TableTrade</a>
