@@ -10,6 +10,8 @@ const SEARCH_TIMEOUT_MS = 8000;
 export const SEARCH_UNAVAILABLE =
   "Can't reach the card list right now. Try a well-known name like Pikachu, or check your connection.";
 
+export type CardSearchResult = { cards: Card[]; savedOnly: boolean };
+
 const CATALOG_CACHE = "tableping.catalogCache.v1";
 
 function readCatalogCache(): Record<string, Card[]> {
@@ -207,8 +209,12 @@ export async function findCardsFromScan(name: string, number?: string): Promise<
 }
 
 export async function searchCards(query: string): Promise<Card[]> {
+  return (await searchCardList(query)).cards;
+}
+
+export async function searchCardList(query: string): Promise<CardSearchResult> {
   const q = query.trim();
-  if (q.length < 2) return [];
+  if (q.length < 2) return { cards: [], savedOnly: false };
   const parsed = parseCatalogQuery(q);
   const local = searchLocalCatalog(q);
   const cached = cachedCards(q);
@@ -219,7 +225,7 @@ export async function searchCards(query: string): Promise<Card[]> {
     if (matched.length) {
       const ranked = rankSearchResults(q, matched).slice(0, 36);
       rememberCards(q, ranked);
-      return ranked;
+      return { cards: ranked, savedOnly: false };
     }
     if (parsed.set) {
       const byName = await searchPokemonTcgLucene(luceneNameQuery(parsed.name));
@@ -227,14 +233,14 @@ export async function searchCards(query: string): Promise<Card[]> {
       if (setHits.length) {
         const ranked = rankSearchResults(q, setHits).slice(0, 36);
         rememberCards(q, ranked);
-        return ranked;
+        return { cards: ranked, savedOnly: false };
       }
     }
-    if (cached.length) return cached;
-    return local;
+    if (cached.length) return { cards: cached, savedOnly: false };
+    return { cards: local, savedOnly: false };
   } catch {
-    if (cached.length) return cached;
-    if (local.length) return local;
+    if (cached.length) return { cards: cached, savedOnly: true };
+    if (local.length) return { cards: local, savedOnly: true };
     throw new Error(SEARCH_UNAVAILABLE);
   }
 }

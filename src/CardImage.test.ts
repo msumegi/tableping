@@ -47,4 +47,23 @@ describe("CardImage", () => {
     expect(tile?.getAttribute("aria-label")).toBe("Charizard");
     expect(node.querySelector(".card-fallback-logo")).toBeTruthy();
   });
+
+  it("tries again when the picture address changes", () => {
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    root = createRoot(host);
+    act(() => {
+      root?.render(createElement(CardImage, { src: "https://images.example/a.png", name: "Pikachu" }));
+    });
+    act(() => {
+      host?.querySelector("img")?.dispatchEvent(new Event("error"));
+    });
+    expect(host.querySelector(".card-fallback")).toBeTruthy();
+    act(() => {
+      root?.render(createElement(CardImage, { src: "https://images.example/b.png", name: "Pikachu" }));
+    });
+    const next = host.querySelector("img");
+    expect(next?.getAttribute("src")).toBe("https://images.example/b.png");
+    expect(host.querySelector(".card-fallback")).toBeNull();
+  });
 });

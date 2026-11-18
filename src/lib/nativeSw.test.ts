@@ -1,3 +1,4 @@
+import { runInNewContext } from "node:vm";
 import { createServer, type Server } from "node:http";
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
@@ -99,6 +100,50 @@ describe("Android service worker", () => {
     expect(sw).not.toMatch(/addEventListener\(\s*['"]fetch['"]/);
     expect(sw).toMatch(/\.then\(function \(\) \{\}, function \(\) \{\}\)/);
     await expect(readFile(join(outDir, "chrome69-sw.js"), "utf8")).rejects.toThrow();
+  });
+
+  it("still reloads windows when cache deletion and unregister both reject", async () => {
+    const navigated: string[] = [];
+    const listeners: Record<string, (event: { waitUntil?: (p: Promise<unknown>) => void }) => void> = {};
+    const fakeSelf = {
+      skipWaiting() {},
+      caches: {
+        keys() {
+          return Promise.reject(new Error("keys failed"));
+        },
+      },
+      registration: {
+        unregister() {
+          return Promise.reject(new Error("unregister failed"));
+        },
+      },
+      clients: {
+        matchAll() {
+          return Promise.resolve([
+            {
+              url: "https://app.local/index.html",
+              navigate(url: string) {
+                navigated.push(url);
+                return Promise.reject(new Error("navigate failed"));
+              },
+            },
+          ]);
+        },
+      },
+      addEventListener(type: string, fn: (event: { waitUntil?: (p: Promise<unknown>) => void }) => void) {
+        listeners[type] = fn;
+      },
+    };
+    runInNewContext(NATIVE_SELF_DESTROYING_SW, { self: fakeSelf, Promise });
+    let waited = Promise.resolve();
+    listeners.activate({
+      waitUntil(p) {
+        waited = p;
+      },
+    });
+    await expect(waited).resolves.toBeUndefined();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(navigated).toEqual(["https://app.local/index.html"]);
   });
 
   it("replaces a controlling Workbox worker on the first load", async () => {

@@ -33,6 +33,7 @@ import {
   PRIVACY_LISTS,
   PRIVACY_PING,
   SCAN_OFFLINE,
+  SEARCH_SAVED_ONLY,
   SITE_APP_PAGE,
   SITE_HOME,
   WANT_LEDE,
@@ -135,6 +136,9 @@ describe("join and first-run copy", () => {
     expect(PRIVACY_PING).toMatch(/ping/i);
     expect(PRIVACY_FAN).toBe("TableTrade is an unofficial fan tool.");
     expect(SCAN_OFFLINE).toBe("Card scanning needs internet. Go online, or type the name.");
+    expect(SEARCH_SAVED_ONLY).toBe(
+      "Showing saved cards. The full card list isn't reachable right now.",
+    );
   });
 
   it("points You at the company site", () => {

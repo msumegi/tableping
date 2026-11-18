@@ -5,6 +5,7 @@ import {
   findCardsFromScan,
   parseCatalogQuery,
   rankSearchResults,
+  searchCardList,
   searchCards,
   searchLocalCatalog,
 } from "./cards";
@@ -159,6 +160,8 @@ describe("searchCards", () => {
     const cards = await searchCards("Pikachu");
     expect(cards.length).toBeGreaterThan(0);
     expect(cards.some((c) => c.name === "Pikachu")).toBe(true);
+    const listed = await searchCardList("Pikachu");
+    expect(listed.savedOnly).toBe(true);
     expect(cards.every((c) => c.id && c.name && c.image && "setName" in c && "number" in c)).toBe(
       true,
     );

@@ -220,6 +220,7 @@ img {
 }
 
 .card-tile img {
+  width: 100%;
   aspect-ratio: 63 / 88;
   object-fit: cover;
   background: #1a1612;
@@ -811,6 +812,7 @@ img {
 }
 
 .match-pair img {
+  width: 100%;
   border-radius: 8px;
   aspect-ratio: 63 / 88;
   object-fit: cover;
@@ -975,7 +977,7 @@ img {
 }
 
 .scan-confirm img {
-  width: 78px;
+  width: 100%;
   aspect-ratio: 63 / 88;
   object-fit: cover;
   border-radius: 8px;
@@ -1082,6 +1084,35 @@ img {
 
   .scan-frame {
     height: 65%;
+  }
+
+  .card-tile img,
+  .match-pair img {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+  }
+
+  .card-fallback {
+    position: relative;
+    width: 100%;
+    height: 0;
+    min-height: 0;
+    padding-top: 139.68%;
+  }
+
+  .card-fallback .card-fallback-logo {
+    position: absolute;
+    left: 13%;
+    top: 50%;
+    width: 74%;
+    margin-top: -37%;
+  }
+
+  .scan-confirm .card-fallback {
+    height: 0;
+    min-height: 0;
+    padding-top: 139.68%;
   }
 }
 

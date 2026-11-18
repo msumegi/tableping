@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CardImage } from "./CardImage";
 import type { Card } from "./types";
-import { QUICK_SEARCHES, SEARCH_UNAVAILABLE, hydrateSetName, searchCards } from "./lib/cards";
+import { QUICK_SEARCHES, SEARCH_UNAVAILABLE, hydrateSetName, searchCardList } from "./lib/cards";
+import { SEARCH_SAVED_ONLY } from "./lib/copy";
 
 export function CardSearchPanel({
   onPick,
@@ -18,18 +19,29 @@ export function CardSearchPanel({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [results, setResults] = useState<Card[]>([]);
+  const [savedOnly, setSavedOnly] = useState(false);
+  const latestQuery = useRef("");
 
   async function run(term: string) {
+    const query = term.trim();
+    latestQuery.current = query;
     setErr("");
+    setResults([]);
+    setSavedOnly(false);
     setBusy(true);
     try {
-      const found = await searchCards(term);
-      setResults(found);
-      if (!found.length) setErr("Nothing for that. Try a name, or a name and set.");
+      const found = await searchCardList(query);
+      if (latestQuery.current !== query) return;
+      setResults(found.cards);
+      setSavedOnly(found.savedOnly && found.cards.length > 0);
+      if (!found.cards.length) setErr("Nothing for that. Try a name, or a name and set.");
     } catch {
+      if (latestQuery.current !== query) return;
+      setResults([]);
+      setSavedOnly(false);
       setErr(SEARCH_UNAVAILABLE);
     } finally {
-      setBusy(false);
+      if (latestQuery.current === query) setBusy(false);
     }
   }
 
@@ -68,6 +80,7 @@ export function CardSearchPanel({
       ) : null}
       {busy ? <p className="status">Searching…</p> : null}
       {err ? <p className="status error">{err}</p> : null}
+      {savedOnly && !err ? <p className="hint">{SEARCH_SAVED_ONLY}</p> : null}
       <div className="card-grid">
         {results.map((card) => (
           <button
