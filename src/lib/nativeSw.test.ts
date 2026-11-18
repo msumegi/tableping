@@ -135,7 +135,7 @@ describe("Android service worker", () => {
       },
     };
     runInNewContext(NATIVE_SELF_DESTROYING_SW, { self: fakeSelf, Promise });
-    let waited = Promise.resolve();
+    let waited: Promise<unknown> = Promise.resolve();
     listeners.activate({
       waitUntil(p) {
         waited = p;
