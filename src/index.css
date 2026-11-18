@@ -225,6 +225,25 @@ img {
   background: #1a1612;
 }
 
+.card-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 63 / 88;
+  background: #1a1612;
+}
+
+.card-fallback .card-fallback-logo {
+  width: 74%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: auto;
+  object-fit: contain;
+  background: transparent;
+  opacity: 0.85;
+}
+
 .card-tile figcaption {
   padding: 7px 8px 9px;
 }
@@ -1031,14 +1050,25 @@ img {
   }
 
   .card-tile img,
-  .match-pair img {
+  .match-pair img,
+  .card-fallback {
     width: 100%;
     min-height: 140px;
     height: auto;
   }
 
-  .scan-confirm img {
+  .card-tile .card-fallback-logo,
+  .match-pair .card-fallback-logo,
+  .scan-confirm .card-fallback-logo {
+    width: 74%;
+    min-height: 0;
+    height: auto;
+  }
+
+  .scan-confirm img,
+  .scan-confirm .card-fallback {
     height: 109px;
+    min-height: 0;
   }
 
   .video-wrap video,

@@ -97,6 +97,8 @@ describe("Android service worker", () => {
     expect(sw).toMatch(/unregister/);
     expect(sw).not.toMatch(/precache/i);
     expect(sw).not.toMatch(/addEventListener\(\s*['"]fetch['"]/);
+    expect(sw).toMatch(/\.then\(function \(\) \{\}, function \(\) \{\}\)/);
+    await expect(readFile(join(outDir, "chrome69-sw.js"), "utf8")).rejects.toThrow();
   });
 
   it("replaces a controlling Workbox worker on the first load", async () => {

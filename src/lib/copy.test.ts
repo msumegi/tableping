@@ -32,6 +32,7 @@ import {
   PRIVACY_FAN,
   PRIVACY_LISTS,
   PRIVACY_PING,
+  SCAN_OFFLINE,
   SITE_APP_PAGE,
   SITE_HOME,
   WANT_LEDE,
@@ -133,6 +134,7 @@ describe("join and first-run copy", () => {
     expect(PRIVACY_LISTS).toMatch(/until you check in/);
     expect(PRIVACY_PING).toMatch(/ping/i);
     expect(PRIVACY_FAN).toBe("TableTrade is an unofficial fan tool.");
+    expect(SCAN_OFFLINE).toBe("Card scanning needs internet. Go online, or type the name.");
   });
 
   it("points You at the company site", () => {

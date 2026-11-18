@@ -4,6 +4,7 @@ import { App as CapApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import type { Card, MatchSource, Presence, Settings, Tab, TradeMatch } from "./types";
 import { AddCardSheet } from "./AddCardSheet";
+import { CardImage } from "./CardImage";
 import {
   loadHave,
   loadSeenMatchIds,
@@ -590,7 +591,7 @@ function ListPane({
               <button className="x" aria-label={`Remove ${card.name}`} onClick={() => onRemove(card.id)}>
                 ×
               </button>
-              <img src={card.image} alt={card.name} />
+              <CardImage src={card.image} name={card.name} />
               <figcaption>
                 <div className="name">{card.name}</div>
                 <div className="meta">
@@ -891,13 +892,13 @@ function PingSheet({ match, onClose, onBlock }: { match: TradeMatch; onClose: ()
         <p className="lede">{kindLabel(match.kind)}</p>
         <div className="match-pair">
           <div>
-            {give ? <img src={give.image} alt={give.name} /> : <div className="empty">—</div>}
+            {give ? <CardImage src={give.image} name={give.name} /> : <div className="empty">—</div>}
             <div className="hint">You can give</div>
             <strong>{give?.name ?? "—"}</strong>
           </div>
           <div className="swap">⇄</div>
           <div>
-            {get ? <img src={get.image} alt={get.name} /> : <div className="empty">—</div>}
+            {get ? <CardImage src={get.image} name={get.name} /> : <div className="empty">—</div>}
             <div className="hint">You can get</div>
             <strong>{get?.name ?? "—"}</strong>
           </div>

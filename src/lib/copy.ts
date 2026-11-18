@@ -102,3 +102,5 @@ export const HEAR_AGAIN = "Hear pings again";
 export const REPORT_PEER = "Don’t show this person";
 
 export const MATCH_PRINTING = "A match is the same card from the same set, not just the same name.";
+
+export const SCAN_OFFLINE = "Card scanning needs internet. Go online, or type the name.";

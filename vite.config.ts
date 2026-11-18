@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
@@ -99,6 +99,8 @@ export default defineConfig({
         handler() {
           if (!nativeBuild || !nativeOutDir) return;
           writeFileSync(resolve(nativeOutDir, "sw.js"), NATIVE_SELF_DESTROYING_SW);
+          const legacySw = resolve(nativeOutDir, "chrome69-sw.js");
+          if (existsSync(legacySw)) unlinkSync(legacySw);
         },
       },
     },

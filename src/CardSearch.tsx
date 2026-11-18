@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CardImage } from "./CardImage";
 import type { Card } from "./types";
 import { QUICK_SEARCHES, SEARCH_UNAVAILABLE, hydrateSetName, searchCards } from "./lib/cards";
 
@@ -74,7 +75,7 @@ export function CardSearchPanel({
             className="card-tile"
             onClick={async () => onPick(await hydrateSetName(card))}
           >
-            <img src={card.image} alt={card.name} />
+            <CardImage src={card.image} name={card.name} />
             <figcaption>
               <div className="name">{card.name}</div>
               <div className="meta">

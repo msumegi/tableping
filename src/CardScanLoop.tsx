@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { CardImage } from "./CardImage";
 import { CardSearchPanel } from "./CardSearch";
 import { findCardsFromScan, hydrateSetName } from "./lib/cards";
 import { cameraDeniedMessage, initialScanState, scanReducer } from "./lib/scanLoop";
@@ -175,7 +176,7 @@ export function CardScanLoop({
 
       {state.phase === "confirm" && state.chosen ? (
         <div className="scan-confirm">
-          <img src={state.chosen.image} alt={state.chosen.name} />
+          <CardImage src={state.chosen.image} name={state.chosen.name} />
           <div>
             <div className="name">{state.chosen.name}</div>
             <div className="meta">
@@ -197,7 +198,7 @@ export function CardScanLoop({
         <div className="card-grid">
           {state.candidates.map((card) => (
             <button key={card.id} className="card-tile" onClick={() => void addCard(card)}>
-              <img src={card.image} alt={card.name} />
+              <CardImage src={card.image} name={card.name} />
               <figcaption>
                 <div className="name">{card.name}</div>
                 <div className="meta">

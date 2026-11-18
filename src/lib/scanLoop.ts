@@ -1,4 +1,5 @@
 import type { Card } from "../types";
+import { SCAN_OFFLINE } from "./copy";
 import type { ScanConfidence } from "./scanMatch";
 
 export type ScanPhase = "starting" | "live" | "reading" | "confirm" | "pick" | "denied" | "ocrfail";
@@ -70,7 +71,7 @@ export function scanReducer(state: ScanState, action: ScanAction): ScanState {
       return {
         ...state,
         phase: "ocrfail",
-        notice: "Can't read cards on this phone. Type the name instead.",
+        notice: SCAN_OFFLINE,
         typeaheadOpen: true,
       };
     case "readStart":
